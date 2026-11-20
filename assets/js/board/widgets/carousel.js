@@ -7,12 +7,18 @@ import { drawMap, start as startMap } from './map.js';
 const MAX_BARS = 12;
 const VIDEO_STALL_MS = 5000;
 
+const MANIFEST_TIMEOUT_MS = 8000;
+
+// Any failure, including a fetch that stalls past the timeout, gives null (map-only playlist).
 async function fetchManifest(url) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), MANIFEST_TIMEOUT_MS);
     try {
-        const res = await fetch(url, { cache: 'no-store' });
+        const res = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
         if (!res.ok) return null;
         return await res.json();
     } catch (e) { return null; }
+    finally { clearTimeout(timer); }
 }
 
 function el(html) {
@@ -41,6 +47,9 @@ export async function startCarousel(stageEl, opts = {}) {
     const spotPhoto = spotView.querySelector('.spot-photo');
 
     try { startMap(); } catch (e) { console.error('Map start failed', e); }
+
+    // The map slide is already active in index.html; draw it now so the stage is never blank while the manifest loads.
+    try { drawMap(); } catch (e) { console.error('drawMap failed', e); }
 
     let manifest = await fetchManifest(manifestUrl);
     let slides = buildPlaylist({ manifest, courses, captions, mode });
