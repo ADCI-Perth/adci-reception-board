@@ -9,7 +9,7 @@ from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-from seed_data import calendar_rows, timetable_rows
+from seed_data import board_rooms, calendar_rows, timetable_rows
 
 TYPES = ["Orientation", "Teaching", "Tuition Free", "Study", "Exam", "Assessment",
          "Semester Break", "Summer", "Christmas", "Event"]
@@ -48,6 +48,57 @@ TT_HELP = [
     "Use the same file name (Timetable.xlsx) so the new file replaces the old one, then Commit.",
     "Afterwards open check.html to confirm the data has no errors.",
 ]
+
+BOARD_SHEETS = [
+    ("Notices", ["Title", "Message", "Start", "End"], [34, 60, 13, 13], [3, 4]),
+    ("Courses", ["Course", "Tagline", "Duration", "Intakes", "Location", "Photo"], [34, 40, 14, 20, 18, 22], []),
+    ("Rooms", ["Room"], [28], []),
+    ("Media", ["File", "Caption"], [28, 50], []),
+]
+BOARD_HELP = [
+    "Board.xlsx - how to fill it in",
+    "Notices: one row per notice. Title is required; Message is optional.",
+    "Start and End are optional dates (dd/mm/yyyy). Leave blank and the notice is always shown.",
+    "Courses: one row per course. Photo is optional - a file name from the media/photos folder (e.g. campus.jpg).",
+    "Rooms: one row per room. These rooms are always shown in the Rooms right now strip.",
+    "Media: File is a photo file name in media/photos; Caption is the text shown over that photo.",
+    "Every sheet is optional - an empty or missing sheet is simply skipped.",
+    "To upload: github.com -> open the project -> data folder -> Add file -> Upload files.",
+    "Use the same file name (Board.xlsx) so the new file replaces the old one, then Commit.",
+    "Afterwards open check.html to confirm the data has no errors.",
+]
+
+
+def build_board(path, rooms):
+    wb = Workbook()
+    wb.remove(wb.active)
+    for name, head, widths, date_cols in BOARD_SHEETS:
+        ws = wb.create_sheet(name)
+        ws.append(head)
+        for c in ws[1]:
+            c.font = Font(bold=True)
+        ws.freeze_panes = "A2"
+        for i, w in enumerate(widths, 1):
+            ws.column_dimensions[get_column_letter(i)].width = w
+        if name == "Rooms":
+            for r in rooms:
+                ws.append(list(r))
+        for row in range(2, LAST + 1):
+            for col in date_cols:
+                ws.cell(row=row, column=col).number_format = DATE_FMT
+        for col in date_cols:
+            dv = DataValidation(type="date", operator="greaterThan", formula1="36526", allow_blank=True,
+                                showErrorMessage=True, errorTitle="Date", error="Enter a date as dd/mm/yyyy")
+            letter = get_column_letter(col)
+            dv.add(f"{letter}2:{letter}{LAST}")
+            ws.add_data_validation(dv)
+    h = wb.create_sheet("How to use")
+    for i, line in enumerate(BOARD_HELP, 1):
+        h.cell(row=i, column=1, value=line)
+    h["A1"].font = Font(bold=True, size=13)
+    h.column_dimensions["A"].width = 110
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    wb.save(path)
 
 
 def build(path, sheet, head, widths, rows, help_lines, date_cols, time_cols, validations):
@@ -93,6 +144,7 @@ def main():
     cal_val = [(1, '"' + ",".join(TYPES) + '"')]
     tt_val = [(5, '"' + ",".join(DAYS) + '"')]
     for folder, c_rows, t_rows, suffix in (("data", cal, tt, ""), ("templates", [], [], "_TEMPLATE")):
+        build_board(f"{folder}/Board{suffix}.xlsx", board_rooms() if folder == "data" else [])
         build(f"{folder}/Calendar{suffix}.xlsx", "Calendar", CAL_HEAD, CAL_WIDTHS, c_rows, CAL_HELP, [3, 4], [], cal_val)
         build(f"{folder}/Timetable{suffix}.xlsx", "Timetable", TT_HEAD, TT_WIDTHS, t_rows, TT_HELP, [9, 10], [6, 7], tt_val)
     print(f"Calendar rows: {len(cal)}  Timetable rows: {len(tt)}")

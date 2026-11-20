@@ -6,6 +6,7 @@ import { parseCalendarRows, resolveDay } from '../assets/js/core/calendar.js';
 import { parseTimetableRows, classesForDay } from '../assets/js/core/timetable.js';
 import { sheetRows } from '../assets/js/core/workbook.js';
 import { checkData } from '../assets/js/core/checks.js';
+import { parseBoardSheets } from '../assets/js/core/boarddata.js';
 
 const read = (file, sheet) => sheetRows(XLSX, new Uint8Array(fs.readFileSync(file)), sheet);
 const cal = parseCalendarRows(read('data/Calendar.xlsx', 'Calendar'));
@@ -41,4 +42,20 @@ test('seed: Orientation Week shows no classes; Teaching Week 1 does', () => {
   assert.deepEqual(classesForDay(tt.classes, 'Jul 2026', '2026-07-21'), []);
   assert.equal(resolveDay(cal, '2026-07-28').mode, 'teaching');
   assert.ok(classesForDay(tt.classes, 'Jul 2026', '2026-07-28').length > 0);
+});
+
+test('seed Board.xlsx parses with zero errors and one room', () => {
+  const wb = XLSX.read(new Uint8Array(fs.readFileSync('data/Board.xlsx')), { type: 'array' });
+  const rows = Object.fromEntries(['Notices', 'Courses', 'Rooms', 'Media'].map(s => [s.toLowerCase(), sheetRows(XLSX, new Uint8Array(fs.readFileSync('data/Board.xlsx')), s)]));
+  assert.deepEqual(wb.SheetNames, ['Notices', 'Courses', 'Rooms', 'Media', 'How to use']);
+  const board = parseBoardSheets(rows);
+  assert.deepEqual(board.errors, []);
+  assert.deepEqual(board.rooms, ['ADCI Classroom 1']);
+  assert.deepEqual(board.notices, []);
+  assert.deepEqual(board.courses, []);
+});
+
+test('Board template has no rows', () => {
+  const t = new Uint8Array(fs.readFileSync('templates/Board_TEMPLATE.xlsx'));
+  for (const s of ['Notices', 'Courses', 'Rooms', 'Media']) assert.equal(sheetRows(XLSX, t, s).length, 0);
 });

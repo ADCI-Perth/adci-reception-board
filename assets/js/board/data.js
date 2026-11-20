@@ -1,11 +1,13 @@
-// Loads Calendar.xlsx and Timetable.xlsx. Each file falls back independently to the
+// Loads Calendar.xlsx, Timetable.xlsx and (optional) Board.xlsx. Each file falls back independently to the
 // last good copy in localStorage (if it cannot be downloaded/opened, or has rows but none
 // valid); with neither, the board runs on empty data (break mode).
 import { sheetRows } from '../core/workbook.js';
 import { parseCalendarRows } from '../core/calendar.js';
 import { parseTimetableRows } from '../core/timetable.js';
+import { parseBoardSheets, emptyBoard } from '../core/boarddata.js';
 
-const KEYS = { calendar: 'adci.calendarRows', timetable: 'adci.timetableRows', loadedAt: 'adci.loadedAt' };
+const KEYS = { calendar: 'adci.calendarRows', timetable: 'adci.timetableRows', boardRows: 'adci.boardRows', loadedAt: 'adci.loadedAt' };
+const BOARD_SHEETS = { notices: 'Notices', courses: 'Courses', rooms: 'Rooms', media: 'Media' };
 
 function readCache(key) {
     try {
@@ -38,6 +40,52 @@ async function fetchLive(XLSX, url, sheetName) {
     }
 }
 
+// Board.xlsx: every sheet is optional (missing -> null). -> { notices, courses, rooms, media } or null
+// when the file could not be downloaded or opened. Never throws.
+async function fetchBoardLive(XLSX) {
+    try {
+        if (!XLSX) throw new Error('SheetJS not loaded');
+        const res = await fetch('data/Board.xlsx', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`data/Board.xlsx returned ${res.status}`);
+        const wb = XLSX.read(await res.arrayBuffer(), { type: 'array' });
+        const out = {};
+        for (const [key, name] of Object.entries(BOARD_SHEETS)) {
+            const ws = wb.Sheets[name];
+            out[key] = ws
+                ? XLSX.utils.sheet_to_json(ws, { raw: true, defval: '' }).map((row, i) => ({ ...row, __row: i + 2 }))
+                : null;
+        }
+        return out;
+    } catch (e) {
+        console.warn('Could not load data/Board.xlsx; using cached copy if available.', e);
+        return null;
+    }
+}
+
+function cachedBoard() {
+    const rows = readCache(KEYS.boardRows);
+    return rows && typeof rows === 'object' && !Array.isArray(rows) ? rows : null;
+}
+
+// Same rule as choose(): live rows that parse to nothing but errors never replace a good cache.
+function loadBoard(liveRows) {
+    const parse = rows => safeParse(() => parseBoardSheets(rows), emptyBoard);
+    const isEmpty = b => !b.notices.length && !b.courses.length && !b.rooms.length && !Object.keys(b.captions).length;
+    if (liveRows) {
+        const parsed = parse(liveRows);
+        if (!(isEmpty(parsed) && parsed.errors.length > 0)) {
+            writeCache(KEYS.boardRows, liveRows);
+            return parsed;
+        }
+        const cached = cachedBoard();
+        if (!cached) return parsed;
+        console.warn(`${KEYS.boardRows}: the live file has no valid rows; keeping the cached copy.`);
+        return parse(cached);
+    }
+    const cached = cachedBoard();
+    return cached ? parse(cached) : emptyBoard();
+}
+
 function cachedRows(key) {
     const rows = readCache(key);
     return Array.isArray(rows) ? rows : null;
@@ -68,9 +116,10 @@ function choose(liveRows, key, parse, isEmpty) {
 }
 
 export async function loadData(XLSX) {
-    const [calLive, ttLive] = await Promise.all([
+    const [calLive, ttLive, boardLive] = await Promise.all([
         fetchLive(XLSX, 'data/Calendar.xlsx', 'Calendar'),
         fetchLive(XLSX, 'data/Timetable.xlsx', 'Timetable'),
+        fetchBoardLive(XLSX),
     ]);
 
     const emptyCal = () => parseCalendarRows([]);
@@ -81,6 +130,7 @@ export async function loadData(XLSX) {
     const parseTt = rows => safeParse(() => parseTimetableRows(rows, cal), () => ({ classes: [], errors: [] }));
     const ttFile = choose(ttLive, KEYS.timetable, parseTt, t => t.classes.length === 0);
     const tt = ttFile.parsed;
+    const board = loadBoard(boardLive);
 
     // source: 'live' only when both files came from the server and were used;
     // 'cache' when either fell back to the saved copy (download failed or file unusable).
@@ -97,5 +147,5 @@ export async function loadData(XLSX) {
         source = 'none';
         loadedAt = null;
     }
-    return { cal, tt, source, loadedAt };
+    return { cal, tt, board, source, loadedAt };
 }

@@ -114,3 +114,8 @@ def timetable_rows():
     summer(s2, "SEC101", "Human Factors Security and Privacy", "Dr Alfred Tseng", ["Tue", "Wed", "Thu"], "09:00", "12:00", date(2027, 1, 12), date(2027, 1, 28))
     summer(s2, "CYB201", "Network Security", "Mohammad Qatatsha", ["Tue", "Wed", "Thu"], "13:00", "16:00", date(2027, 1, 12), date(2027, 1, 28))
     return rows
+
+
+def board_rooms():
+    """Rooms always shown in the 'Rooms right now' strip."""
+    return [("ADCI Classroom 1",)]
