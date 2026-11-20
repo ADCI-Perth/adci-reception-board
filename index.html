@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ADCI | Information Hub</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+<!-- Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.19/topojson.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datamaps/0.5.1/datamaps.world.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="assets/css/board.css" rel="stylesheet">
+</head>
+<body>
+
+<div id="header">
+  <div class="header-brand">
+      <img alt="Logo" id="logo" src="./Present Pictures/institute_logo.png"/>
+      <div id="header-title">ADCI | Information Hub</div>
+  </div>
+  <div class="ticker-wrap">
+      <div class="live-dot"></div> <span id="ticker-text">WELCOME TO ADCI</span>
+  </div>
+</div>
+
+<div id="main">
+  <!-- SIDEBAR (panels are moved between #slot-sidebar and #slot-hub by main.js) -->
+  <div class="col-sidebar" id="slot-sidebar">
+      <div class="info-card clock-card" id="panel-clock">
+          <div id="clock">00:00</div>
+          <div id="date">Monday, Jan 1</div>
+      </div>
+
+      <div class="info-card weather-card" id="panel-weather">
+         <div id="weather-content">Loading...</div>
+      </div>
+
+      <div class="info-card cyber-news-card" id="panel-cyber-news">
+          <div class="news-label">Live Cyber Security News</div>
+          <div id="cyber-news-list" class="news-list">
+              <div class="news-item">
+                  <div class="news-item-title">Loading latest cybersecurity headlines...</div>
+                  <div class="news-item-meta"><span>The Hacker News / BleepingComputer</span><span>Live Feed</span></div>
+              </div>
+          </div>
+      </div>
+
+      <div class="info-card ai-news-card" id="panel-ai-news">
+          <div class="news-label">Live AI &amp; Data Science News</div>
+          <div id="ai-news-list" class="news-list">
+              <div class="news-item">
+                  <div class="news-item-title">Loading latest AI &amp; data science headlines...</div>
+                  <div class="news-item-meta"><span>arXiv / Hacker News</span><span>Live Feed</span></div>
+              </div>
+          </div>
+      </div>
+
+      <div class="info-card threat-card" id="panel-threat" hidden>
+          <div class="threat-label">Live Threat Watch</div>
+          <div id="threat-cve" class="threat-cve">Loading...</div>
+          <div id="threat-title" class="threat-title">Checking exploited vulnerability feed</div>
+          <div class="threat-meta">
+              <span id="threat-added">CISA KEV</span>
+              <span id="threat-count">Free Feed</span>
+          </div>
+      </div>
+
+      <div class="info-card sidebar-ds-card" id="panel-dspulse" hidden>
+          <div class="sidebar-ds-label">Live Data Science Pulse</div>
+          <div id="sidebar-ds-title" class="sidebar-ds-title">Loading open-source data...</div>
+          <div id="sidebar-ds-summary" class="sidebar-ds-summary">Checking activity from public data science projects.</div>
+          <div class="sidebar-ds-metrics">
+              <div class="sidebar-ds-metric"><strong id="sidebar-ds-stars">--</strong><span>Stars</span></div>
+              <div class="sidebar-ds-metric"><strong id="sidebar-ds-forks">--</strong><span>Forks</span></div>
+              <div class="sidebar-ds-metric"><strong id="sidebar-ds-issues">--</strong><span>Issues</span></div>
+          </div>
+          <div id="sidebar-ds-updated" class="sidebar-ds-updated">GitHub API</div>
+      </div>
+  </div>
+
+  <!-- CENTER CAROUSEL -->
+  <div class="col-map" id="center-carousel">
+      <!-- 1. MAP -->
+      <div class="center-slide active-view" id="view-map">
+          <div id="map-viz"></div>
+      </div>
+      <!-- 2. PHOTOS -->
+      <div class="center-slide" id="view-image">
+          <div id="img-bg" class="blur-bg"></div>
+          <img id="img-fg" src="" class="sharp-fg ken-burns">
+      </div>
+      <!-- 3. VIDEO -->
+      <div class="center-slide" id="view-video">
+          <video class="video-content" id="promo-video" muted playsinline>
+              <source id="promo-video-source" src="./Present Pictures/Data-1.mp4" type="video/mp4">
+          </video>
+      </div>
+
+  </div>
+
+  <!-- HUB -->
+  <div class="col-hub">
+      <div class="hub-title" id="hub-title">TODAY'S SCHEDULE</div>
+      <div id="slot-hub">
+          <div id="schedule-container"></div>
+          <div class="info-card qr-box" id="panel-qr">
+              <div class="qr-frame">
+                 <img src="./Present Pictures/QRCode.JPG" alt="Student Portal QR"
+                      onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=ADCI_Portal_Fallback'">
+              </div>
+              <div class="qr-text-group">
+                  <h4>STUDENT SYSTEM</h4>
+                  <p>Scan for portal access</p>
+              </div>
+          </div>
+      </div>
+      <div id="term-countdown" hidden style="flex: none; margin-top: 10px; padding: 14px; background: var(--brand-dark); color: white; border-radius: 12px; text-align: center;">
+          <div id="countdown-label" style="font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Classes Resume In</div>
+          <div id="days-count" style="font-size: 32px; font-weight: 800; color: var(--brand-accent);">-- Days</div>
+      </div>
+  </div>
+</div>
+
+<script type="module" src="assets/js/main.js"></script>
+</body>
+</html>
