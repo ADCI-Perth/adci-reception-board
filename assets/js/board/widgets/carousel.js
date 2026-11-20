@@ -32,7 +32,7 @@ export async function startCarousel(stageEl, opts = {}) {
             mapDuration = 30000, photoDuration = 6000 } = opts;
 
     const mapView = stageEl.querySelector('#view-map');
-    const photoView = el('<div class="center-slide" id="view-photo"><img class="photo" alt=""><div class="caption" hidden><small>OUR CAMPUS</small><h2></h2></div></div>');
+    const photoView = el('<div class="center-slide" id="view-photo"><div class="photo-bg"></div><img class="photo" alt=""><div class="caption" hidden><small>OUR CAMPUS</small><h2></h2></div></div>');
     const videoView = el('<div class="center-slide" id="view-video"><video muted playsinline style="width:100%;height:100%;object-fit:cover;background:#000"></video></div>');
     const spotView = el('<div class="center-slide" id="view-spot"><div class="spot"><div class="txt"></div><div class="spot-photo"></div></div></div>');
     // Progress: countdown ring + slide number (top-left), kind chip, dot track (bottom-left).
@@ -48,6 +48,7 @@ export async function startCarousel(stageEl, opts = {}) {
     const ofEl = ringEl.querySelector('.n small');
     const views = [mapView, photoView, videoView, spotView];
     const img = photoView.querySelector('img');
+    const photoBg = photoView.querySelector('.photo-bg');
     const capBox = photoView.querySelector('.caption');
     const capTitle = capBox.querySelector('h2');
     const video = videoView.querySelector('video');
@@ -135,6 +136,7 @@ export async function startCarousel(stageEl, opts = {}) {
             } else if (slide.kind === 'photo') {
                 img.onerror = go;
                 img.src = slide.url;
+                photoBg.style.backgroundImage = `url("${slide.url}")`;   // blurred fill behind the whole photo
                 if (slide.caption) { capTitle.textContent = slide.caption; capBox.hidden = false; }
                 else { capTitle.textContent = ''; capBox.hidden = true; }
                 show(photoView);
