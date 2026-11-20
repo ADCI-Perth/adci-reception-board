@@ -57,7 +57,8 @@ const nowHHMM = () => {
 
 function startPanels(data, state, iso) {
     const board = data.board || {};
-    const notices = activeNotices(board.notices, iso);
+    let notices = [];
+    safely('Active notices', () => { notices = activeNotices(board.notices, iso); });
     safely('Key dates', () => renderKeyDates($('keydates-list'), keyDates(data.cal, iso)));
     safely('Notices', () => startNotices(
         { title: $('notice-title'), message: $('notice-message'), pager: $('notice-pager') },
@@ -65,13 +66,14 @@ function startPanels(data, state, iso) {
     safely('Countdown', () => renderCountdown(
         { box: $('panel-countdown'), label: $('countdown-label'), days: $('days-count'), sub: $('countdown-sub') }, state, iso));
 
-    const classes = classesForDay(data.tt?.classes, state.period?.term ?? null, iso);
+    let classes = [];
+    safely('Classes', () => { classes = classesForDay(data.tt?.classes, state.period?.term ?? null, iso); });
     const hubEl = $('hub-main');
     // Schedule tick (30 s): live/next/ended rows and the rooms strip use the real time.
     // Past midnight: reload so the mode, banner and classes are recomputed for the new day.
     const isClasses = hubKind(state.mode) === 'classes';
     const drawHub = () => safely('Hub', () => renderHub(hubEl, state, { classes, now: nowHHMM(), content }));
-    const tick = () => {
+    const tick = () => safely('Schedule tick', () => {
         if (todayISO(location.search) !== iso) safeReload();
         const now = nowHHMM();
         if (isClasses) drawHub();
@@ -83,14 +85,14 @@ function startPanels(data, state, iso) {
                 strip.hidden = rooms.length === 0;
             });
         }
-    };
+    });
     if (!isClasses) drawHub();
     tick();
     setInterval(tick, CONFIG.scheduleRefreshMs);
     // Info hubs re-roll their tips and quote hourly (as the old boards did); the 30 s tick
     // only re-renders the classes hub.
     if (!isClasses) setInterval(drawHub, 3600000);
-    setInterval(() => autoScrollTimetable(hubEl.querySelector('.classes')), 10000);
+    setInterval(() => autoScrollTimetable(hubEl?.querySelector('.classes')), 10000);
 }
 
 // Every hour: if the calendar now gives a different mode or period, or the day has changed,
@@ -129,7 +131,7 @@ async function boot() {
 
     applyHeader(state);
     safely('Layout', () => applyLayout(state));
-    startPanels(data, state, iso);
+    safely('Panels', () => startPanels(data, state, iso));
     try {
         startCarousel($('stage'), {
             courses: data.board?.courses || [], captions: data.board?.captions || {}, mode: state.mode,
