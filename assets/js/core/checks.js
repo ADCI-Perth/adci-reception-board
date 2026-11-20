@@ -1,10 +1,11 @@
-import { addDays, weekday, formatShort } from './dates.js';
+import { addDays, weekday, formatShort, daysBetween } from './dates.js';
 import { resolveDay } from './calendar.js';
 import { bannerFor } from './banner.js';
 
 const TEACHING_TYPES = ['teaching', 'summer'];
 
-export function checkData(cal, tt) {
+// todayIso is optional; when given, warns if the calendar runs out within 8 weeks.
+export function checkData(cal, tt, todayIso) {
   const issues = [];
   const add = (level, message) => issues.push({ level, message });
   const periods = (cal && cal.periods) || [];
@@ -59,6 +60,13 @@ export function checkData(cal, tt) {
       }
     }
     flush();
+  }
+
+  if (todayIso && periods.length) {
+    const lastEnd = periods.reduce((m, p) => (p.end > m ? p.end : m), periods[0].end);
+    if (daysBetween(todayIso, lastEnd) <= 56) {
+      add('warning', `The calendar ends on ${formatShort(lastEnd)} — add next year's dates soon`);
+    }
   }
 
   return issues;

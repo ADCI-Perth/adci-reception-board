@@ -9,6 +9,8 @@ import { todayISO, formatShort, dayCode } from './core/dates.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
+// Modes whose board layout shows a class schedule; other days list no classes.
+const SCHEDULE_MODES = ['teaching', 'summer', 'orientation', 'assessment'];
 
 async function loadFile(url, sheetName) {
   const result = { url, sheetName, rows: null, modified: null, error: null };
@@ -46,17 +48,17 @@ async function main() {
 
   const cal = parseCalendarRows(calFile.rows);
   const tt = parseTimetableRows(ttFile.rows, cal);
-  const issues = checkData(cal, tt);
+  const today = todayISO(location.search);
+  const issues = checkData(cal, tt, today);
   const errors = issues.filter(i => i.level === 'error');
   let html = '';
   if (!errors.length) html += '<li class="ok">No problems found</li>';
   for (const i of issues) html += `<li class="${i.level === 'error' ? 'error' : 'warning'}">${i.level === 'error' ? 'Problem' : 'Warning'}: ${esc(i.message)}</li>`;
   $('issues').innerHTML = html;
 
-  const today = todayISO(location.search);
   const rows = previewDays(cal, today, 21).map(d => {
     const state = resolveDay(cal, d.date);
-    const units = classesForDay(tt.classes, state.period?.term ?? null, d.date).map(c => c.unit).join(', ');
+    const units = !SCHEDULE_MODES.includes(d.mode) ? '' : classesForDay(tt.classes, state.period?.term ?? null, d.date).map(c => c.unit).join(', ');
     return `<tr><td><a href="index.html?date=${esc(d.date)}">${esc(dayCode(d.date))} ${esc(formatShort(d.date))}</a></td>` +
       `<td class="mode">${esc(d.mode)}</td><td>${esc(d.banner)}</td><td>${esc(units)}</td></tr>`;
   }).join('');

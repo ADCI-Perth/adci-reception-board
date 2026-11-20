@@ -67,3 +67,18 @@ test('sheetRows reads rows with __row and throws on missing sheet', () => {
   assert.equal(out[0].Type, 'Teaching');
   assert.throws(() => sheetRows(XLSX, data, 'Nope'), /Sheet "Nope" not found/);
 });
+
+test('checkData warns when the calendar runs out within 8 weeks of today', () => {
+  const c = parseCalendarRows([
+    { Type: 'Teaching', Name: 'A', Start: '01/03/2027', End: '05/03/2027', Term: 'X', __row: 2 },
+    { Type: 'Event', Name: 'E', Start: '30/06/2027', End: '30/06/2027', __row: 3 },
+  ]);
+  const t = { classes: [{ term: 'X', unit: 'U', day: 'Mon', start: '09:00', end: '10:00', from: '2027-03-01', to: '2027-03-05', row: 2 }], errors: [] };
+  const ending = list => list.filter(i => i.message.startsWith('The calendar ends'));
+  assert.deepEqual(ending(checkData(c, t)), []);
+  assert.deepEqual(ending(checkData(c, t, '2026-12-01')), []);
+  const hit = ending(checkData(c, t, '2027-01-08'));
+  assert.equal(hit.length, 1);
+  assert.equal(hit[0].level, 'warning');
+  assert.equal(hit[0].message, "The calendar ends on 5 Mar 2027 — add next year's dates soon");
+});
