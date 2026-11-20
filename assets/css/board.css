@@ -353,3 +353,31 @@
     /* --- Board shell additions (layout plumbing only, no visual change) --- */
     [hidden] { display: none !important; }
     #slot-hub { display: contents; }
+
+    /* --- Per-mode differences (body[data-mode] is set by layout.js) ---
+       The rules above are v4's look (teaching family). These restore each base file's look. */
+
+    /* Exam_Week_Hub.html 239 / Semester_Break_Hubv2.html 239: red hub underline */
+    body[data-mode="exam"] .hub-title,
+    body[data-mode="study"] .hub-title,
+    body[data-mode="break"] .hub-title { border-bottom-color: var(--alert-color); }
+
+    /* Standard_reception_hub_tuition_free_week.html 248: blue tuition-free card */
+    body[data-mode="tuition"] .tuition-free-card {
+        background: linear-gradient(135deg, #f0f7ff 0%, #e0eaff 100%); border: 1px solid var(--brand-accent);
+    }
+
+    /* Tuition / exam tip rows: icon column is 32px (Exam_Week_Hub.html 262, tuition file 262) */
+    body[data-mode="tuition"] .event-time,
+    body[data-mode="exam"] .event-time { font-size: 32px; }
+
+    /* Semester_Break_Hubv2.html 242-245: hub scroll area is a flex column holding the news cards */
+    body[data-mode="study"] #schedule-container,
+    body[data-mode="break"] #schedule-container {
+        flex: 1 1 auto; display: flex; flex-direction: column;
+        min-height: 0; max-height: none; overflow-y: auto; padding: 2px 5px 2px 2px; scroll-behavior: smooth;
+    }
+    /* Semester_Break_Hubv2.html 278, 289, 910: news cards and quote spaced 12px in the hub */
+    body[data-mode="study"] .cyber-news-card, body[data-mode="study"] .ai-news-card,
+    body[data-mode="break"] .cyber-news-card, body[data-mode="break"] .ai-news-card,
+    body[data-mode="study"] .hub-quote, body[data-mode="break"] .hub-quote { margin-bottom: 12px; }

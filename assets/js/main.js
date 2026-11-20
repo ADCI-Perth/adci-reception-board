@@ -6,6 +6,9 @@ import { bannerFor, titlesFor } from './core/banner.js';
 import { CONFIG } from './board/config.js';
 import { loadData } from './board/data.js';
 import { safeReload } from './board/reload.js';
+import { applyLayout, layoutFor, createSnowflakes } from './board/layout.js';
+import { renderInfoHub, renderAssessmentEmpty } from './board/infohub.js';
+import * as content from './board/content.js';
 import { renderSchedule, autoScrollTimetable } from './board/schedule.js';
 import * as clock from './board/widgets/clock.js';
 import * as weather from './board/widgets/weather.js';
@@ -31,31 +34,17 @@ function startWidgets() {
     }
 }
 
-// Standard layout (teaching family). Task 8 replaces this with applyLayout(mode) from layout.js.
-const STANDARD = {
-    sidebar: ['panel-clock', 'panel-weather', 'panel-cyber-news', 'panel-ai-news'],
-    hub: ['schedule-container', 'panel-qr'],
-};
-const ALL_PANELS = ['panel-clock', 'panel-weather', 'panel-cyber-news', 'panel-ai-news', 'panel-threat', 'panel-dspulse', 'panel-qr'];
-
-function applyStandardLayout() {
-    const used = new Set([...STANDARD.sidebar, ...STANDARD.hub]);
-    for (const id of ALL_PANELS) if (!used.has(id)) $(id).hidden = true;
-    for (const id of STANDARD.sidebar) { $(id).hidden = false; $('slot-sidebar').appendChild($(id)); }
-    for (const id of STANDARD.hub) { $(id).hidden = false; $('slot-hub').appendChild($(id)); }
-}
-
 function applyTexts(state) {
     const titles = titlesFor(state.mode);
     document.title = titles.header;
     $('header-title').textContent = titles.header;
-    $('hub-title').textContent = titles.hub;
+    $('hub-title-text').textContent = titles.hub;
     $('ticker-text').textContent = bannerFor(state);
 }
 
 function renderCountdown(state, iso) {
     const box = $('term-countdown');
-    if (!state.countdown) { box.hidden = true; return; }
+    if (!layoutFor(state.mode).countdown || !state.countdown) { box.hidden = true; return; }
     const days = daysBetween(iso, state.countdown.target);
     $('countdown-label').textContent = state.countdown.label;
     $('days-count').textContent = `${days} Day${days !== 1 ? 's' : ''}`;
@@ -70,11 +59,36 @@ function startSchedule(data, state, iso) {
         // (v4 picked the weekday on every render). With ?date= the day never changes.
         // safeReload only reloads when the site answers; otherwise the next tick retries.
         if (todayISO(location.search) !== iso) safeReload();
-        renderSchedule(container, classesForDay(data.tt.classes, term, iso));
+        const classes = classesForDay(data.tt.classes, term, iso);
+        if (state.mode === 'assessment' && classes.length === 0) renderAssessmentEmpty(container);
+        else renderSchedule(container, classes);
     };
     render();
     setInterval(render, CONFIG.scheduleRefreshMs);
-    setInterval(() => autoScrollTimetable(container), 10000);
+}
+
+// Info-hub modes: card, tips and quote; re-rendered hourly for a fresh quote (as the old boards did).
+function startInfoHub(target, state) {
+    const render = () => {
+        try { renderInfoHub(target, state, content); } catch (e) { console.error('Info hub failed', e); }
+    };
+    render();
+    setInterval(render, 3600000);
+}
+
+// Every hour: if the calendar now gives a different mode or period, or the day has changed
+// (info-hub modes have no schedule tick to notice midnight), reload. safeReload keeps the
+// current board when the site is unreachable; the next hourly check retries.
+function watchModeChange(cal, state, iso) {
+    setInterval(() => {
+        const nowIso = todayISO(location.search);
+        let fresh;
+        try { fresh = resolveDay(cal, nowIso); } catch (e) { return; }
+        const changed = fresh.mode !== state.mode
+            || (fresh.period?.name ?? null) !== (state.period?.name ?? null)
+            || nowIso !== iso;
+        if (changed) safeReload();
+    }, 3600000);
 }
 
 async function boot() {
@@ -98,9 +112,19 @@ async function boot() {
     }
 
     applyTexts(state);
-    applyStandardLayout();
+    let infoTarget = null;
+    try {
+        infoTarget = applyLayout(state.mode);
+    } catch (e) {
+        console.error('Layout failed; keeping the default panels.', e);
+    }
     renderCountdown(state, iso);
-    startSchedule(data, state, iso);
+    if (infoTarget) startInfoHub(infoTarget, state);
+    else startSchedule(data, state, iso);
+    if (state.mode === 'christmas') createSnowflakes();
+    const container = $('schedule-container');
+    setInterval(() => autoScrollTimetable(container), 10000);
+    watchModeChange(data.cal, state, iso);
     console.info(`Board: ${iso} mode=${state.mode} data=${data.source}`, data.loadedAt || '');
 }
 

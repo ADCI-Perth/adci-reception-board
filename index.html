@@ -12,8 +12,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/datamaps/0.5.1/datamaps.world.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link href="assets/css/board.css" rel="stylesheet">
+<link href="assets/css/christmas.css" rel="stylesheet">
 </head>
 <body>
+
+<!-- Snowflakes are added here only in christmas mode -->
+<div id="snow-container"></div>
 
 <div id="header">
   <div class="header-brand">
@@ -102,7 +106,10 @@
 
   <!-- HUB -->
   <div class="col-hub">
-      <div class="hub-title" id="hub-title">TODAY'S SCHEDULE</div>
+      <div class="hub-title" id="hub-title">
+          <span id="hub-title-text">TODAY'S SCHEDULE</span>
+          <span class="badge badge-live" id="hub-badge" hidden></span>
+      </div>
       <div id="slot-hub">
           <div id="schedule-container"></div>
           <div class="info-card qr-box" id="panel-qr">
