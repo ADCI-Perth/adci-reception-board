@@ -34,5 +34,17 @@ Blank templates are in the **templates** folder of the repository
 
 ## If the screen looks wrong
 
-Open `check.html` (see above) and fix what it reports. If a spreadsheet cannot be read, the board
-keeps showing the last good data, so reception is never left blank.
+Open `check.html` (see above) and fix what it reports. If a spreadsheet can't be downloaded,
+can't be opened, or has no valid rows at all, the board keeps using the last good copy it saved,
+so reception is never left blank. If only some rows are wrong, those rows are skipped (the rest
+still show) and `check.html` lists them.
+
+## Setting up the reception PC
+
+- Open the board address in **Chrome** or **Edge** and make it full screen (press **F11**),
+  or run the browser in kiosk mode.
+- Set the browser to open the board automatically when the PC starts.
+- Don't use an incognito/private or guest window: those forget the saved copy of the board's data.
+- Turn off screen sleep and screen savers so the display stays on.
+- Make sure the PC's clock and time zone are set to **Perth**. The board uses the PC's date to
+  decide what to show.
