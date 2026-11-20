@@ -1,29 +1,76 @@
-/* --- WEATHER (Auto Refresh 10 mins) --- (ported from Semester_Break_Hubv2.html 530-556)
-   Only change: the card is looked up by its panel id (#panel-weather, was #weather-card-bg). */
+/* --- WEATHER (auto refresh 10 mins) --- forecast.json: current conditions plus
+   the next two hours that are at least 2 h apart, UV and sunset. */
+import { escapeHtml } from '../util.js';
+
 let CONFIG;
 
+export function uvLabel(uv) {
+    if (uv >= 11) return 'Extreme';
+    if (uv >= 8) return 'Very high';
+    if (uv >= 6) return 'High';
+    if (uv >= 3) return 'Moderate';
+    return 'Low';
+}
+
+// '07:01 PM' -> '7:01'
+export function sunsetShort(s) {
+    const m = /^\s*(\d{1,2}):(\d{2})/.exec(String(s || ''));
+    return m ? `${parseInt(m[1], 10)}:${m[2]}` : '--';
+}
+
+function hourLabel(date) {
+    const h = date.getHours();
+    return `${h % 12 || 12} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+// First hour >= 2 h after now, then the next >= 2 h after that (hours of today only).
+export function pickHours(hours, now = new Date()) {
+    const picks = [];
+    let threshold = now.getTime() + 2 * 3600000;
+    for (const h of hours || []) {
+        const t = h.time_epoch ? h.time_epoch * 1000 : new Date(String(h.time).replace(' ', 'T')).getTime();
+        if (t >= threshold) {
+            picks.push({ label: hourLabel(new Date(t)), temp: Math.round(h.temp_c) });
+            threshold = t + 2 * 3600000;
+            if (picks.length === 2) break;
+        }
+    }
+    return picks;
+}
+
+function conditionClass(text) {
+    const txt = text.toLowerCase();
+    if (txt.includes('thunder') || txt.includes('storm')) return 'weather-storm';
+    if (txt.includes('rain') || txt.includes('drizzle') || txt.includes('shower')) return 'weather-rain';
+    if (txt.includes('snow') || txt.includes('ice')) return 'weather-snow';
+    if (txt.includes('cloud') || txt.includes('overcast')) return 'weather-cloudy';
+    if (txt.includes('mist') || txt.includes('fog')) return 'weather-mist';
+    return 'weather-sunny';
+}
+
 function fetchWeather() {
-    fetch(`https://api.weatherapi.com/v1/current.json?key=${CONFIG.weatherKey}&q=${CONFIG.weatherCity}`)
-    .then(r => r.json()).then(d => {
+    fetch(`https://api.weatherapi.com/v1/forecast.json?key=${CONFIG.weatherKey}&q=${CONFIG.weatherCity}&days=1`)
+    .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }).then(d => {
         const card = document.getElementById('panel-weather');
-        const txt = d.current.condition.text.toLowerCase();
-        card.className = 'info-card weather-card';
-        if (txt.includes("rain") || txt.includes("drizzle") || txt.includes("shower")) card.classList.add("weather-rain");
-        else if (txt.includes("thunder") || txt.includes("storm")) card.classList.add("weather-storm");
-        else if (txt.includes("snow") || txt.includes("ice")) card.classList.add("weather-snow");
-        else if (txt.includes("cloud") || txt.includes("overcast")) card.classList.add("weather-cloudy");
-        else if (txt.includes("mist") || txt.includes("fog")) card.classList.add("weather-mist");
-        else card.classList.add("weather-sunny");
+        const cur = d.current;
+        const day = d.forecast.forecastday[0];
+        card.className = 'card weather ' + conditionClass(cur.condition.text);
+
+        const tiles = pickHours(day.hour).map(p => `<div>${escapeHtml(p.label)}<b>${p.temp}°</b></div>`);
+        const uv = Math.round(cur.uv ?? day.day.uv);
+        tiles.push(`<div>UV<b>${uv} <em>${uvLabel(uv)}</em></b></div>`);
+        tiles.push(`<div>Sunset<b>${escapeHtml(sunsetShort(day.astro.sunset))}</b></div>`);
 
         document.getElementById('weather-content').innerHTML = `
-            <img src="https:${d.current.condition.icon}" class="weather-icon">
-            <div class="weather-info">
-                <div class="temp-big">${Math.round(d.current.temp_c)}°C</div>
-                <div class="weather-text">${d.current.condition.text}</div>
-
+            <div class="wx-top">
+                <img src="https:${escapeHtml(cur.condition.icon)}" alt="">
+                <b>${Math.round(cur.temp_c)}°</b>
+                <div><span>${escapeHtml(cur.condition.text)}</span><span>Feels like ${Math.round(cur.feelslike_c)}° · Wind ${Math.round(cur.wind_kph)} km/h</span></div>
             </div>
-        `;
-    }).catch(e => {});
+            <div class="wx-row">${tiles.join('')}</div>`;
+    }).catch(() => {
+        document.getElementById('weather-content').textContent = 'Weather unavailable';
+    });
 }
 
 export function start(config) {
