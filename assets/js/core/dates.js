@@ -96,10 +96,10 @@ export function formatShort(iso) {
 }
 
 export function todayISO(search) {
-  const m = /[?&]date=([^&]*)/.exec(search || '');
+  const m = /[?&]date=(\d{4}-\d{2}-\d{2})(?:&|$)/.exec(search || '');
   if (m) {
-    const iso = toISODate(decodeURIComponent(m[1]));
-    if (iso && /^\d{4}-\d{2}-\d{2}$/.test(decodeURIComponent(m[1]).trim())) return iso;
+    const iso = toISODate(m[1]);
+    if (iso) return iso;
   }
   const now = new Date();
   return build(now.getFullYear(), now.getMonth() + 1, now.getDate());

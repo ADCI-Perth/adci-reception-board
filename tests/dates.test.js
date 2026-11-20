@@ -23,3 +23,9 @@ test('arithmetic and formatting', () => {
   assert.equal(formatShort('2026-11-09'), '9 Nov 2026');
   assert.equal(todayISO('?date=2026-12-14'), '2026-12-14');
 });
+test('todayISO falls back to local date on malformed or invalid ?date', () => {
+  const local = todayISO('');
+  assert.equal(todayISO('?date=%'), local);
+  assert.equal(todayISO('?date=%E0%A4%A'), local);
+  assert.equal(todayISO('?date=2026-13-45'), local);
+});
