@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ADCI | Exam Week Hub</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+<!-- Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.19/topojson.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datamaps/0.5.1/datamaps.world.min.js"></script>
+
+<style>
+    /* --- VARIABLES --- */
+    :root {
+      --bg-body: #ecf0f3;
+      --bg-card: #ffffff;
+      --brand-dark: #002b55;
+      --brand-blue: #0056b3;
+      --brand-accent: #00d2ff;
+      --alert-color: #d32f2f;
+      --success-color: #2e7d32;
+      --warning-color: #ed6c02;
+      --text-main: #111111;
+      --text-muted: #555555;
+      --shadow-card: 0 10px 30px rgba(0, 43, 85, 0.1);
+      --border-radius: 16px;
+    }
+
+    body {
+      margin: 0; font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      color: var(--text-main);
+      height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* --- HEADER --- */
+    #header {
+      height: 110px; flex: none;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 50px;
+      border-bottom: 5px solid var(--brand-dark);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      z-index: 100;
+    }
+    .header-brand { display: flex; align-items: center; gap: 25px; }
+    #logo { height: 80px; }
+    #header-title {
+      font-family: 'Oswald', sans-serif; font-size: 42px; color: var(--brand-dark);
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .ticker-wrap {
+        background: var(--brand-dark); color: #fff; padding: 10px 30px; border-radius: 50px;
+        font-family: 'JetBrains Mono', monospace; font-size: 18px; display: flex; align-items: center;
+        box-shadow: 0 5px 15px rgba(0, 43, 85, 0.3);
+    }
+    .live-dot { width: 12px; height: 12px; background: #00d2ff; border-radius: 50%; margin-right: 12px; animation: blink 1s infinite; }
+
+    /* --- MAIN LAYOUT --- */
+    #main { display: flex; height: calc(100vh - 110px); padding: 25px; gap: 25px; box-sizing: border-box; }
+
+    .info-card, .col-map, .col-hub {
+        background: var(--bg-card); border-radius: var(--border-radius);
+        box-shadow: var(--shadow-card); border: 1px solid rgba(255,255,255,0.6);
+    }
+
+    /* --- COL 1: SIDEBAR (20%) --- */
+    .col-sidebar { flex: 20%; display: flex; flex-direction: column; gap: 20px; }
+
+    /* Clock */
+    .clock-card {
+        flex: 0.65; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: linear-gradient(180deg, #fff 0%, #f8faff 100%);
+    }
+    #clock { font-family: 'JetBrains Mono', monospace; font-size: 46px; font-weight: 700; color: var(--brand-dark); line-height: 1; }
+    #date { font-size: 16px; font-weight: 600; color: var(--text-muted); margin-top: 8px; text-transform: uppercase; }
+
+    /* Weather */
+    .weather-card {
+        flex: 0.65; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 14px;
+        position: relative; overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.6); border-top: 1px solid rgba(255, 255, 255, 0.9);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    }
+    .weather-card::after {
+        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 50%;
+        background: linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+        pointer-events: none; z-index: 1;
+    }
+    #weather-content { position: relative; z-index: 5; display: flex; align-items: center; gap: 12px; }
+    .weather-icon { width: 54px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.2)); }
+    .temp-big { font-size: 34px; font-weight: 800; line-height: 1; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+    .weather-text { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .sun-reminder {
+        font-size: 11px;
+        font-weight: 700;
+        color: rgba(6, 131, 248, 0.9);
+        margin-top: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        animation: pulse 3s infinite;
+    }
+
+    /* Weather Gradients */
+    .weather-sunny { background-color: #fdbb2d; background-image: radial-gradient(at 90% 10%, #2980b9 0px, transparent 50%), radial-gradient(at 10% 90%, #fdbb2d 0px, transparent 50%), radial-gradient(at 50% 50%, #6dd5fa 0px, transparent 50%); }
+    .weather-cloudy { background-color: #bdc3c7; background-image: radial-gradient(at 0% 0%, #2c3e50 0px, transparent 50%), radial-gradient(at 100% 100%, #bdc3c7 0px, transparent 50%), radial-gradient(at 50% 50%, #8ca6db 0px, transparent 50%); }
+    .weather-rain { background-color: #2c3e50; background-image: radial-gradient(at 80% 0%, #4ca1af 0px, transparent 50%), radial-gradient(at 0% 100%, #2c3e50 0px, transparent 50%), radial-gradient(at 0% 0%, #134e5e 0px, transparent 50%); }
+    .weather-storm { background-color: #232526; background-image: radial-gradient(at 20% 20%, #414345 0px, transparent 50%), radial-gradient(at 80% 80%, #232526 0px, transparent 50%), radial-gradient(at 50% 50%, #4b134f 0px, transparent 50%); }
+    .weather-snow { background-color: #e6dada; background-image: radial-gradient(at 0% 0%, #274046 0px, transparent 50%), radial-gradient(at 100% 0%, #e6dada 0px, transparent 50%), radial-gradient(at 100% 100%, #83a4d4 0px, transparent 50%); }
+    .weather-mist { background-color: #606c88; background-image: radial-gradient(at 50% 0%, #B0DACD 0px, transparent 50%), radial-gradient(at 50% 100%, #3f4c6b 0px, transparent 50%); }
+
+    /* Threat Watch */
+    .threat-card {
+        flex: 0.85; background: linear-gradient(135deg, #081827 0%, #003f5c 100%);
+        color: #fff; display: flex; flex-direction: column; justify-content: center;
+        padding: 16px; box-sizing: border-box; border-left: 6px solid var(--brand-accent);
+        overflow: hidden; position: relative;
+    }
+    .threat-card::after {
+        content: ""; position: absolute; right: -35px; top: -45px; width: 110px; height: 110px;
+        border: 18px solid rgba(0, 210, 255, 0.12); border-radius: 50%;
+    }
+    .threat-label {
+        font-size: 11px; font-weight: 800; color: var(--brand-accent);
+        text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px;
+        position: relative; z-index: 2;
+    }
+    .threat-cve {
+        font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 800;
+        color: #ffffff; line-height: 1.1; position: relative; z-index: 2;
+    }
+    .threat-title {
+        margin-top: 6px; font-size: 12px; font-weight: 700; line-height: 1.25;
+        color: rgba(255,255,255,0.92); position: relative; z-index: 2;
+    }
+    .threat-meta {
+        margin-top: 8px; display: flex; justify-content: space-between; gap: 8px;
+        font-size: 10px; font-weight: 700; text-transform: uppercase;
+        color: rgba(255,255,255,0.7); position: relative; z-index: 2;
+    }
+
+    /* Sidebar Data Science Pulse */
+    .sidebar-ds-card {
+        flex: 0.95;
+        background: linear-gradient(135deg, #0a1628 0%, #002b55 60%, #003f5c 100%);
+        color: #fff; display: flex; flex-direction: column; justify-content: center;
+        padding: 16px; box-sizing: border-box; border-left: 6px solid var(--brand-accent);
+        overflow: hidden; position: relative;
+    }
+    .sidebar-ds-card::after {
+        content: "DS"; position: absolute; right: -8px; top: -10px;
+        font-family: 'JetBrains Mono', monospace; font-size: 60px; font-weight: 800;
+        color: rgba(0, 210, 255, 0.07);
+    }
+    .sidebar-ds-label {
+        font-size: 10px; font-weight: 800; color: var(--brand-accent);
+        text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px;
+        position: relative; z-index: 2;
+    }
+    .sidebar-ds-title {
+        font-family: 'Oswald', sans-serif; font-size: 17px; font-weight: 700;
+        color: #fff; line-height: 1.15; margin-bottom: 4px; position: relative; z-index: 2;
+    }
+    .sidebar-ds-summary {
+        font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 500;
+        line-height: 1.3; margin-bottom: 10px; position: relative; z-index: 2;
+    }
+    .sidebar-ds-metrics {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+        margin-bottom: 10px; position: relative; z-index: 2;
+    }
+    .sidebar-ds-metric {
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(0,210,255,0.15);
+        border-radius: 7px; padding: 6px 4px; text-align: center;
+    }
+    .sidebar-ds-metric strong {
+        display: block; font-family: 'JetBrains Mono', monospace; font-size: 14px;
+        color: var(--brand-accent); line-height: 1;
+    }
+    .sidebar-ds-metric span {
+        display: block; margin-top: 3px; font-size: 8px; font-weight: 800;
+        color: rgba(255,255,255,0.5); text-transform: uppercase;
+    }
+    .sidebar-ds-updated {
+        font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.55);
+        text-transform: uppercase; letter-spacing: 0.5px;
+        position: relative; z-index: 2;
+    }
+
+    /* --- COL 2: CENTER CAROUSEL (55% Width) --- */
+    .col-map {
+        flex: 55%; position: relative; overflow: hidden;
+        background: #000; border: none;
+    }
+
+    .center-slide {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        opacity: 0; visibility: hidden; transition: opacity 1.2s ease-in-out, visibility 1.2s;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .center-slide.active-view { opacity: 1; visibility: visible; z-index: 10; }
+
+    /* Map */
+    #view-map { background: #eef2f5; }
+    #map-viz { width: 100%; height: 100%; }
+    .city-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; fill: #002b55; text-shadow: 2px 0 #fff, -2px 0 #fff, 0 2px #fff, 0 -2px #fff; pointer-events: none; }
+    .attack-line { fill: none; stroke-linecap: round; filter: drop-shadow(0 0 2px rgba(0,0,0,0.3)); }
+    .ripple { fill: none; stroke-width: 2px; opacity: 0; }
+
+    /* Media */
+    .video-content { width: 100%; height: 100%; object-fit: contain; }
+    #view-video { background: #000; }
+    #view-image { overflow: hidden; }
+    .blur-bg {
+        position: absolute; top: -10%; left: -10%; width: 120%; height: 120%;
+        background-size: cover; background-position: center;
+        filter: blur(25px) brightness(0.7); z-index: 1;
+        transition: background-image 1s ease;
+    }
+    .sharp-fg {
+        position: relative; z-index: 2; max-width: 95%; max-height: 90%;
+        object-fit: contain; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        border-radius: 8px; transition: transform 10s ease;
+    }
+    .ken-burns { animation: slowZoom 15s infinite alternate; }
+    @keyframes slowZoom { 0% { transform: scale(1); } 100% { transform: scale(1.05); } }
+
+    /* --- COL 3: HUB (25% Width) --- */
+    .col-hub {
+        flex: 25%; position: relative; overflow: hidden;
+        display: flex; flex-direction: column;
+        background: #fff; padding: 20px;
+    }
+    .hub-title {
+        font-family: 'Oswald', sans-serif; font-size: 28px; color: var(--brand-dark);
+        border-bottom: 4px solid var(--alert-color); padding-bottom: 8px; margin-bottom: 10px;
+        display: flex; justify-content: space-between; align-items: center; flex: none;
+    }
+    #schedule-container { flex: 0 1 auto; max-height: 100%; overflow-y: auto; padding: 2px 5px 2px 2px; scroll-behavior: smooth; }
+    #schedule-container::-webkit-scrollbar { display: none; }
+
+    /* Tuition Free Card */
+    .tuition-free-card {
+        padding: 20px; text-align: center; border-radius: 12px; margin-bottom: 16px;
+        background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%); border: 1px solid var(--alert-color);
+    }
+
+    /* Break Tips rows */
+    .event-row {
+        display: flex; align-items: stretch; background: #fff; border: 1px solid #e0e4e8;
+        border-left: 8px solid #ccc;
+        margin-bottom: 12px; border-radius: 12px;
+        min-height: 116px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.03); transition: all 0.3s ease; position: relative; overflow: hidden;
+    }
+    .event-time {
+        width: 90px; background: #f8f9fa; font-family: 'JetBrains Mono'; font-weight: 700; color: var(--text-main);
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        font-size: 32px; border-right: 1px solid #eee; padding: 8px;
+    }
+    .event-details { flex: 1; padding: 10px 15px; display: flex; flex-direction: column; justify-content: center; }
+    .event-details h4 { margin: 0 0 5px 0; font-size: 21px; color: var(--brand-dark); font-weight: 800; line-height: 1.18; }
+    .event-details p { margin: 0; font-size: 16px; color: #444; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .badge { padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; color: white; display: inline-block; }
+    .badge-live { background: var(--success-color); animation: pulse 2s infinite; }
+
+    @keyframes blink { 50% { opacity: 0.4; } }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="header-brand">
+      <img alt="Logo" id="logo" src="./Present Pictures/institute_logo.png"/>
+      <div id="header-title">ADCI | Exam Week Hub</div>
+  </div>
+  <div class="ticker-wrap">
+      <div class="live-dot"></div> EXAM WEEK IN PROGRESS — GOOD LUCK TO ALL STUDENTS
+  </div>
+</div>
+
+<div id="main">
+  <!-- SIDEBAR -->
+  <div class="col-sidebar">
+      <div class="info-card clock-card">
+          <div id="clock">00:00</div>
+          <div id="date">Monday, Jan 1</div>
+      </div>
+
+      <div class="info-card weather-card" id="weather-card-bg">
+         <div id="weather-content">Loading...</div>
+      </div>
+
+      <div class="info-card threat-card">
+          <div class="threat-label">Live Threat Watch</div>
+          <div id="threat-cve" class="threat-cve">Loading...</div>
+          <div id="threat-title" class="threat-title">Checking exploited vulnerability feed</div>
+          <div class="threat-meta">
+              <span id="threat-added">CISA KEV</span>
+              <span id="threat-count">Free Feed</span>
+          </div>
+      </div>
+
+      <div class="info-card sidebar-ds-card">
+          <div class="sidebar-ds-label">Live Data Science Pulse</div>
+          <div id="sidebar-ds-title" class="sidebar-ds-title">Loading open-source data...</div>
+          <div id="sidebar-ds-summary" class="sidebar-ds-summary">Checking activity from public data science projects.</div>
+          <div class="sidebar-ds-metrics">
+              <div class="sidebar-ds-metric"><strong id="sidebar-ds-stars">--</strong><span>Stars</span></div>
+              <div class="sidebar-ds-metric"><strong id="sidebar-ds-forks">--</strong><span>Forks</span></div>
+              <div class="sidebar-ds-metric"><strong id="sidebar-ds-issues">--</strong><span>Issues</span></div>
+          </div>
+          <div id="sidebar-ds-updated" class="sidebar-ds-updated">GitHub API</div>
+      </div>
+  </div>
+
+  <!-- CENTER CAROUSEL -->
+  <div class="col-map" id="center-carousel">
+      <!-- 1. MAP -->
+      <div class="center-slide active-view" id="view-map">
+          <div id="map-viz"></div>
+      </div>
+      <!-- 2. PHOTOS -->
+      <div class="center-slide" id="view-image">
+          <div id="img-bg" class="blur-bg"></div>
+          <img id="img-fg" src="" class="sharp-fg ken-burns">
+      </div>
+      <!-- 3. VIDEO -->
+      <div class="center-slide" id="view-video">
+          <video class="video-content" id="promo-video" muted playsinline>
+              <source id="promo-video-source" src="./Present Pictures/Data-1.mp4" type="video/mp4">
+          </video>
+      </div>
+
+  </div>
+
+  <!-- HUB -->
+  <div class="col-hub">
+      <div class="hub-title">
+          <span>EXAM WEEK</span>
+          <span class="badge badge-live">LIVE</span>
+      </div>
+      <div id="schedule-container"></div>
+      <div id="term-countdown" style="flex: none; margin-top: 10px; padding: 14px; background: var(--brand-dark); color: white; border-radius: 12px; text-align: center;">
+          <div style="font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Exams Complete In</div>
+          <div id="days-count" style="font-size: 32px; font-weight: 800; color: var(--brand-accent);">-- Days</div>
+      </div>
+  </div>
+</div>
+
+<script>
+/* --- AUTO REFRESH SYSTEM --- */
+setTimeout(() => { window.location.reload(); }, 46800000);
+
+
+/* --- CONFIGURATION --- */
+const CONFIG = {
+    weatherKey: "a5bbc068379441b89cf24203251803",
+    weatherCity: "Perth",
+    mapDuration: 30000,
+    photoDuration: 6000,
+    tuitionFreeStart: "2026-06-08",
+    tuitionFreeEnd:   "2026-06-19",
+
+    photos: [
+        "Referral_Poster.jpg","Building.jpg", "Campus Logo.jpg", "Classroom 1.jpg", "Classroom 2.jpg",
+        "Enterance.jpg", "Kitchen.jpg", "Meeting Room.jpg", "orientation.jpg","orientation2.jpg", "orientation3.jpg", "orientation4.jpg",
+        "Designer (1).png", "ds2.jpg", "Referral_Poster.jpg",
+    ],
+
+    videos: [
+        "Data-1.mp4",
+        "Hacking-1.mp4",
+        "Data-2.mp4",
+        "Hacking-2.mp4",
+        "Hacking-3.mp4",
+        "Hacking-3.mp4"
+    ],
+
+    breakTips: [
+        // { title: "EXAM SUBMISSION", desc: "All written assessments must be submitted via Canvas before your scheduled exam time.", icon: "📋", color: "#d32f2f" },
+        { title: "NO PHONES ALLOWED", desc: "Mobile devices must be switched off and stored in your bag during all examinations.", icon: "📵", color: "#002b55" },
+        { title: "ARRIVE EARLY", desc: "Be seated at least 10 minutes before your exam starts. Late entry may be refused.", icon: "⏰", color: "#ed6c02" },
+        { title: "STUDENT ID REQUIRED", desc: "You must present your student ID card to sit any examination. No exceptions.", icon: "🪪", color: "#0056b3" },
+        { title: "OPEN BOOK POLICY", desc: "Check your unit outline — some units permit notes. Confirm with your trainer if unsure.", icon: "📖", color: "#2e7d32" },
+        { title: "ACADEMIC INTEGRITY", desc: "Any attempt to cheat or plagiarise will result in an automatic fail and disciplinary action.", icon: "⚖️", color: "#6200ea" },
+        { title: "SUPPORT AVAILABLE", desc: "IT Support and Student Services are open 9AM–5PM. Reach out if you need any assistance.", icon: "🙋", color: "#00838f" }
+    ],
+
+    quotes: [
+        "\u201cThe secret of getting ahead is getting started.\u201d \u2014 Mark Twain",
+        "\u201cBelieve you can and you\u2019re halfway there.\u201d \u2014 Theodore Roosevelt",
+        "\u201cIt always seems impossible until it\u2019s done.\u201d \u2014 Nelson Mandela",
+        "\u201cPreparation is the key to success.\u201d \u2014 Alexander Graham Bell",
+        "\u201cYou\u2019ve studied hard. Trust yourself. You\u2019ve got this.\u201d"
+    ]
+};
+
+/* --- CAROUSEL ENGINE --- */
+let playlistIndex = 0;
+let rotationTimer;
+const views = {
+    map: document.getElementById('view-map'),
+    image: document.getElementById('view-image'),
+    video: document.getElementById('view-video')
+};
+const imgFg = document.getElementById('img-fg');
+const imgBg = document.getElementById('img-bg');
+const videoElement = document.getElementById('promo-video');
+const videoSource = document.getElementById('promo-video-source');
+
+function playNextSlide() {
+    Object.values(views).forEach(el => el.classList.remove('active-view'));
+    clearTimeout(rotationTimer);
+
+    if (playlistIndex === 0) {
+        views.map.classList.add('active-view');
+        setTimeout(drawMap, 100);
+        rotationTimer = setTimeout(nextIndex, CONFIG.mapDuration);
+    }
+    else if (playlistIndex > 0 && playlistIndex <= CONFIG.videos.length) {
+        const videoIdx = playlistIndex - 1;
+        const src = "./Present Pictures/" + CONFIG.videos[videoIdx];
+        views.video.classList.add('active-view');
+        if (videoSource.getAttribute('src') !== src) {
+            videoSource.setAttribute('src', src);
+            videoElement.load();
+        }
+        videoElement.currentTime = 0;
+        let playPromise = videoElement.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                videoElement.onended = () => { nextIndex(); };
+            }).catch(err => { nextIndex(); });
+        }
+    }
+    else {
+        let photoIdx = playlistIndex - CONFIG.videos.length - 1;
+        if (photoIdx < CONFIG.photos.length) {
+            views.image.classList.add('active-view');
+            const src = "./Present Pictures/" + CONFIG.photos[photoIdx];
+            imgFg.src = src;
+            imgBg.style.backgroundImage = `url('${src}')`;
+            imgFg.classList.remove('ken-burns');
+            void imgFg.offsetWidth;
+            imgFg.classList.add('ken-burns');
+            rotationTimer = setTimeout(nextIndex, CONFIG.photoDuration);
+        } else {
+            playlistIndex = -1;
+            nextIndex();
+        }
+    }
+}
+function nextIndex() { playlistIndex++; playNextSlide(); }
+playNextSlide();
+
+/* --- CLOCK --- */
+function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    document.getElementById('date').innerText = now.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' });
+}
+setInterval(updateClock, 1000); updateClock();
+
+/* --- WEATHER (Auto Refresh 10 mins) --- */
+function fetchWeather() {
+    fetch(`https://api.weatherapi.com/v1/current.json?key=${CONFIG.weatherKey}&q=${CONFIG.weatherCity}`)
+    .then(r => r.json()).then(d => {
+        const card = document.getElementById('weather-card-bg');
+        const txt = d.current.condition.text.toLowerCase();
+        card.className = 'info-card weather-card';
+        if (txt.includes("rain") || txt.includes("drizzle") || txt.includes("shower")) card.classList.add("weather-rain");
+        else if (txt.includes("thunder") || txt.includes("storm")) card.classList.add("weather-storm");
+        else if (txt.includes("snow") || txt.includes("ice")) card.classList.add("weather-snow");
+        else if (txt.includes("cloud") || txt.includes("overcast")) card.classList.add("weather-cloudy");
+        else if (txt.includes("mist") || txt.includes("fog")) card.classList.add("weather-mist");
+        else card.classList.add("weather-sunny");
+
+        document.getElementById('weather-content').innerHTML = `
+            <img src="https:${d.current.condition.icon}" class="weather-icon">
+            <div class="weather-info">
+                <div class="temp-big">${Math.round(d.current.temp_c)}°C</div>
+                <div class="weather-text">${d.current.condition.text}</div>
+
+            </div>
+        `;
+    }).catch(e => {});
+}
+fetchWeather();
+setInterval(fetchWeather, 600000);
+
+/* --- THREAT WATCH (CISA Known Exploited Vulnerabilities) --- */
+const CISA_KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json";
+const CISA_KEV_GITHUB_URL = "https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json";
+const CISA_KEV_PROXY_URL = "https://api.allorigins.win/raw?url=" + encodeURIComponent(CISA_KEV_URL);
+const GITHUB_ADVISORY_URL = "https://api.github.com/advisories?per_page=5&sort=published&direction=desc";
+let threatItems = [];
+let threatIndex = 0;
+let threatSource = "CISA KEV";
+
+function shortThreatText(value, maxLength) {
+    const text = String(value || "").trim();
+    return text.length > maxLength ? text.slice(0, maxLength - 3) + "..." : text;
+}
+
+function showThreatItem() {
+    const cveEl = document.getElementById("threat-cve");
+    const titleEl = document.getElementById("threat-title");
+    const addedEl = document.getElementById("threat-added");
+    const countEl = document.getElementById("threat-count");
+    if (!cveEl || !titleEl || !addedEl || !countEl) return;
+
+    if (!threatItems.length) {
+        cveEl.textContent = "Threat Feed";
+        titleEl.textContent = "Live feed is temporarily unavailable. Retrying automatically.";
+        addedEl.textContent = "CISA KEV";
+        countEl.textContent = "Retrying";
+        return;
+    }
+
+    const item = threatItems[threatIndex % threatItems.length];
+    const vendorProduct = [item.vendorProject, item.product].filter(Boolean).join(" ");
+    const title = vendorProduct || item.vulnerabilityName || "Known exploited vulnerability";
+    const ransomware = item.knownRansomwareCampaignUse === "Known" ? "Ransomware: Known" : "Active exploit";
+
+    cveEl.textContent = item.cveID || "CVE update";
+    titleEl.textContent = shortThreatText(title, 58);
+    addedEl.textContent = item.dateAdded ? "Added " + item.dateAdded : ransomware;
+    countEl.textContent = threatItems.totalCount ? threatItems.totalCount + " tracked" : threatSource;
+    threatIndex++;
+}
+
+function fetchJsonWithTimeout(url, timeoutMs) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { cache: "no-store", signal: controller.signal })
+        .then(response => {
+            clearTimeout(timer);
+            if (!response.ok) throw new Error("Feed returned " + response.status);
+            return response.json();
+        })
+        .catch(error => {
+            clearTimeout(timer);
+            throw error;
+        });
+}
+
+function useCisaThreatData(data) {
+    const vulnerabilities = Array.isArray(data.vulnerabilities) ? data.vulnerabilities : [];
+    threatItems = vulnerabilities
+        .slice()
+        .sort((a, b) => String(b.dateAdded || "").localeCompare(String(a.dateAdded || "")))
+        .slice(0, 5);
+    threatItems.totalCount = vulnerabilities.length;
+    threatSource = "CISA KEV";
+}
+
+function useGithubThreatData(data) {
+    const advisories = Array.isArray(data) ? data : [];
+    threatItems = advisories.map(item => ({
+        cveID: item.cve_id || item.ghsa_id || "Security advisory",
+        vendorProject: item.vulnerabilities && item.vulnerabilities[0] ? item.vulnerabilities[0].package.name : item.type,
+        product: item.severity ? item.severity.toUpperCase() : "",
+        vulnerabilityName: item.summary,
+        knownRansomwareCampaignUse: "",
+        dateAdded: item.published_at ? item.published_at.slice(0, 10) : ""
+    })).slice(0, 5);
+    threatItems.totalCount = 0;
+    threatSource = "GitHub Advisory";
+}
+
+function fetchThreatData() {
+    document.getElementById("threat-cve").textContent = "Updating...";
+    document.getElementById("threat-title").textContent = "Checking public cyber threat feeds";
+
+    fetchJsonWithTimeout(CISA_KEV_GITHUB_URL, 9000)
+    .then(useCisaThreatData)
+    .catch(() => fetchJsonWithTimeout(CISA_KEV_URL, 6000).then(useCisaThreatData))
+    .catch(() => fetchJsonWithTimeout(CISA_KEV_PROXY_URL, 9000).then(useCisaThreatData))
+    .catch(() => fetchJsonWithTimeout(GITHUB_ADVISORY_URL, 9000).then(useGithubThreatData))
+    .then(() => {
+        threatIndex = 0;
+        showThreatItem();
+    })
+    .catch(() => {
+        threatItems = [];
+        threatSource = "CISA KEV";
+        showThreatItem();
+    });
+}
+fetchThreatData();
+setInterval(showThreatItem, 8000);
+setInterval(fetchThreatData, 1800000);
+
+/* --- DATA SCIENCE PULSE (GitHub Public API) --- */
+const DATA_SCIENCE_REPOS = [
+    { owner: "pandas-dev", repo: "pandas", label: "pandas" },
+    { owner: "scikit-learn", repo: "scikit-learn", label: "scikit-learn" },
+    { owner: "pytorch", repo: "pytorch", label: "PyTorch" },
+    { owner: "tensorflow", repo: "tensorflow", label: "TensorFlow" }
+];
+let dataPulseItems = [];
+let dataPulseIndex = 0;
+
+function compactNumber(value) {
+    return new Intl.NumberFormat("en-AU", { notation: "compact", maximumFractionDigits: 1 }).format(value || 0);
+}
+
+function showDataPulseItem() {
+    if (!dataPulseItems.length) return;
+    const item = dataPulseItems[dataPulseIndex % dataPulseItems.length];
+    const updated = item.updated_at ? new Date(item.updated_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" }) : "GitHub API";
+
+    document.getElementById("sidebar-ds-title").textContent = item.label + " activity";
+    document.getElementById("sidebar-ds-summary").textContent = "Live open-source signal from a major data science project.";
+    document.getElementById("sidebar-ds-stars").textContent = compactNumber(item.stargazers_count);
+    document.getElementById("sidebar-ds-forks").textContent = compactNumber(item.forks_count);
+    document.getElementById("sidebar-ds-issues").textContent = compactNumber(item.open_issues_count);
+    document.getElementById("sidebar-ds-updated").textContent = "Updated " + updated;
+    dataPulseIndex++;
+}
+
+function fetchDataSciencePulse() {
+    Promise.all(DATA_SCIENCE_REPOS.map(repo =>
+        fetchJsonWithTimeout(`https://api.github.com/repos/${repo.owner}/${repo.repo}`, 9000)
+            .then(data => ({ ...data, label: repo.label }))
+    ))
+    .then(items => {
+        dataPulseItems = items;
+        dataPulseIndex = 0;
+        showDataPulseItem();
+    })
+    .catch(() => {
+        dataPulseItems = [{
+            label: "Data Science",
+            stargazers_count: 0,
+            forks_count: 0,
+            open_issues_count: 0,
+            updated_at: ""
+        }];
+        document.getElementById("sidebar-ds-title").textContent = "Data science activity";
+        document.getElementById("sidebar-ds-summary").textContent = "Live project data is temporarily unavailable.";
+        document.getElementById("sidebar-ds-stars").textContent = "--";
+        document.getElementById("sidebar-ds-forks").textContent = "--";
+        document.getElementById("sidebar-ds-issues").textContent = "--";
+        document.getElementById("sidebar-ds-updated").textContent = "Retrying";
+    });
+}
+fetchDataSciencePulse();
+setInterval(showDataPulseItem, 10000);
+setInterval(fetchDataSciencePulse, 1800000);
+
+/* --- TUITION FREE WEEK HUB --- */
+function parseLocalDate(str) {
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+function renderBreakHub() {
+    const container = document.getElementById('schedule-container');
+    if (!container) return;
+
+    // nextTermStart = day after tuitionFreeEnd — auto-calculated from CONFIG
+    const endDate = parseLocalDate(CONFIG.tuitionFreeEnd);
+    const nextTermStart = new Date(endDate);
+    nextTermStart.setDate(nextTermStart.getDate() + 1);
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const diff = Math.ceil((nextTermStart - today) / (1000 * 60 * 60 * 24));
+    document.getElementById('days-count').innerText = diff > 0 ? `${diff} Day${diff !== 1 ? 's' : ''}` : "Exams Complete!";
+
+    const fmtDate = d => d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+    const startDate = parseLocalDate(CONFIG.tuitionFreeStart);
+    const dateRange = `${fmtDate(startDate)} — ${fmtDate(endDate)}`;
+
+    let html = `
+        <div class="tuition-free-card">
+            <div style="font-size:12px; color:var(--brand-blue); font-weight:800; letter-spacing:1px;">CURRENTLY IN</div>
+            <div style="font-size:22px; font-weight:800; font-family:'Oswald';">EXAM WEEK</div>
+            <div style="font-size:13px; margin-top:6px; color:var(--text-muted); font-weight:600;">${dateRange}</div>
+        </div>
+    `;
+
+    CONFIG.breakTips.forEach(item => {
+        html += `
+            <div class="event-row" style="border-left-color: ${item.color};">
+                <div class="event-time">${item.icon}</div>
+                <div class="event-details">
+                    <h4>${item.title}</h4>
+                    <p>${item.desc}</p>
+                </div>
+            </div>`;
+    });
+
+    const quote = CONFIG.quotes[Math.floor(Math.random() * CONFIG.quotes.length)];
+    html += `<div style="padding:15px; background:#f8f9fa; border-radius:12px; border:1px dashed #ccc; text-align:center; font-style:italic; font-size:13px; color:#666;">${quote}</div>`;
+    container.innerHTML = html;
+}
+renderBreakHub();
+setInterval(renderBreakHub, 3600000);
+
+function autoScrollHub() {
+    const el = document.getElementById('schedule-container');
+    if (el.scrollHeight > el.clientHeight) {
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 5) el.scrollTo({ top: 0, behavior: 'smooth' });
+        else el.scrollBy({ top: 100, behavior: 'smooth' });
+    }
+}
+setInterval(autoScrollHub, 10000);
+
+/* --- MAP --- */
+var mapEl = document.getElementById("map-viz");
+var proj, path;
+var attacks = [];
+var ripples = [];
+var dm;
+
+function drawMap() {
+    if(mapEl.innerHTML !== "" && !document.getElementById('view-map').classList.contains('active-view')) return;
+    mapEl.innerHTML = ""; attacks = []; ripples = [];
+
+    dm = new Datamap({
+        element: mapEl,
+        projection: 'orthographic',
+        setProjection: function(el) {
+            var h = el.offsetHeight;
+            var w = el.offsetWidth;
+            var radius = Math.min(h, w) / 2.2;
+            proj = d3.geo.orthographic().scale(radius).translate([w / 2, h / 2]).clipAngle(90);
+            path = d3.geo.path().projection(proj);
+            d3.select("svg circle").attr("r", radius).attr("cx", w / 2).attr("cy", h / 2);
+            return { projection: proj, path: path };
+        },
+        fills: { defaultFill: '#d0d6db' },
+        geographyConfig: { borderColor: '#ffffff', borderWidth: 1, highlightFillColor: '#b8c2cc', highlightBorderColor: '#fff' }
+    });
+
+    var svg = d3.select("svg");
+    svg.insert("circle", ":first-child").attr("cx", "50%").attr("cy", "50%").attr("r", "1").style("fill", "#e3e9ef");
+    window.mapLayer = svg.append("g").attr("id", "attacks");
+    window.rippleLayer = svg.append("g").attr("id", "ripples");
+    window.labelLayer = svg.append("g").attr("id", "labels");
+    window.textElements = window.labelLayer.selectAll("text").data(cityLabels).enter().append("text").attr("class", "city-label").text(d=>d.n).attr("text-anchor","middle");
+}
+
+const cityLabels = [
+  {n:"PERTH", lat:-31.95, lng:115.86}, {n:"SYDNEY", lat:-33.86, lng:151.20}, {n:"TOKYO", lat:35.68, lng:139.69},
+  {n:"BEIJING", lat:39.90, lng:116.40}, {n:"SINGAPORE", lat:1.35, lng:103.81}, {n:"LONDON", lat:51.50, lng:-0.12},
+  {n:"NEW YORK", lat:40.71, lng:-74.00}, {n:"SAO PAULO", lat:-23.55, lng:-46.63}
+];
+
+window.addEventListener('resize', function() { clearTimeout(window.resizeTimer); window.resizeTimer = setTimeout(drawMap, 250); });
+
+var t0 = Date.now();
+d3.timer(function() {
+    var t = Date.now() - t0;
+    if(proj && document.getElementById('view-map').classList.contains('active-view')) {
+        proj.rotate([t * 0.01, -15]);
+        d3.selectAll("path.datamaps-subunit").attr("d", path);
+        if(window.textElements) {
+            window.textElements.each(function(d) {
+                var center = proj.invert([mapEl.offsetWidth / 2, mapEl.offsetHeight / 2]);
+                var dist = d3.geo.distance(center, [d.lng, d.lat]);
+                if(dist < 1.5) {
+                    var p = proj([d.lng, d.lat]);
+                    d3.select(this).style("display","block").attr("x", p[0]).attr("y", p[1] - 8);
+                } else { d3.select(this).style("display","none"); }
+            });
+        }
+        var lines = window.mapLayer.selectAll("path.attack-line").data(attacks);
+        lines.enter().append("path").attr("class", "attack-line").style("fill", "none").style("stroke-linecap","round").style("opacity", 0.8);
+        lines.attr("d", path).style("stroke", d => d.color).style("stroke-width", d => d.width).style("stroke-dasharray", d => d.dash).style("stroke-dashoffset", d => -(t * d.speed) % 100);
+        lines.exit().remove();
+        var circles = window.rippleLayer.selectAll("path.ripple").data(ripples);
+        circles.enter().append("path").attr("class","ripple").style("stroke", d=>d.color);
+        circles.attr("d", function(d) { return d3.geo.path().projection(proj)(d3.geo.circle().origin([d.lng, d.lat]).angle(d.radius)()); }).style("opacity", d => d.opacity).style("stroke-width", d => (d.opacity * 2) + "px");
+        ripples.forEach(r => { r.radius += 0.2; r.opacity -= 0.02; });
+        ripples = ripples.filter(r => r.opacity > 0);
+    }
+});
+
+function launchAttack() {
+    try {
+        if(!document.getElementById('view-map').classList.contains('active-view')) return;
+        let s = cityLabels[Math.floor(Math.random()*cityLabels.length)];
+        let d = cityLabels[Math.floor(Math.random()*cityLabels.length)];
+        if(s!==d) {
+            let id = Date.now() + Math.random();
+            let rand = Math.random();
+            let profile;
+            if(rand < 0.4)      profile = {color: "#d32f2f", width: 3, dash: "none", speed: 0.15};
+            else if(rand < 0.8) profile = {color: "#0056b3", width: 2, dash: "5,5", speed: 0.12};
+            else                profile = {color: "#6200ea", width: 2, dash: "2,4", speed: 0.18};
+            attacks.push({ type: "Feature", geometry: {type:"LineString", coordinates:[[s.lng,s.lat],[d.lng,d.lat]]}, ...profile, id:id });
+            setTimeout(() => { ripples.push({ lat: d.lat, lng: d.lng, radius: 0.5, opacity: 1, color: profile.color }); }, 1000);
+            setTimeout(() => attacks = attacks.filter(a => a.id !== id), 2500);
+        }
+    } catch(e) {}
+}
+setInterval(launchAttack, 800);
+</script>
+</body>
+</html>

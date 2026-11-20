@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ADCI | Information Hub</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+<!-- Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.19/topojson.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datamaps/0.5.1/datamaps.world.min.js"></script>
+
+<style>
+    /* --- VARIABLES --- */
+    :root {
+      --bg-body: #ecf0f3;
+      --bg-card: #ffffff;
+      --brand-dark: #002b55;       
+      --brand-blue: #0056b3;       
+      --brand-accent: #00d2ff;     
+      --alert-color: #d32f2f;      
+      --success-color: #2e7d32;
+      --warning-color: #ed6c02;
+      --text-main: #111111;        
+      --text-muted: #555555;
+      --shadow-card: 0 10px 30px rgba(0, 43, 85, 0.1);
+      --border-radius: 16px;
+    }
+
+    body {
+      margin: 0; font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      color: var(--text-main);
+      height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* --- HEADER --- */
+    #header {
+      height: 110px; flex: none;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 50px; 
+      border-bottom: 5px solid var(--brand-dark);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      z-index: 100;
+    }
+    .header-brand { display: flex; align-items: center; gap: 25px; }
+    #logo { height: 80px; }
+    #header-title {
+      font-family: 'Oswald', sans-serif; font-size: 42px; color: var(--brand-dark); 
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .ticker-wrap {
+        background: var(--brand-dark); color: #fff; padding: 10px 30px; border-radius: 50px;
+        font-family: 'JetBrains Mono', monospace; font-size: 18px; display: flex; align-items: center;
+        box-shadow: 0 5px 15px rgba(0, 43, 85, 0.3);
+    }
+    .live-dot { width: 12px; height: 12px; background: #00d2ff; border-radius: 50%; margin-right: 12px; animation: blink 1s infinite; }
+
+    /* --- MAIN LAYOUT --- */
+    #main { display: flex; height: calc(100vh - 110px); padding: 25px; gap: 25px; box-sizing: border-box; }
+    
+    .info-card, .col-map, .col-hub {
+        background: var(--bg-card); border-radius: var(--border-radius);
+        box-shadow: var(--shadow-card); border: 1px solid rgba(255,255,255,0.6);
+    }
+
+    /* --- COL 1: SIDEBAR (20%) --- */
+    .col-sidebar { flex: 20%; display: flex; flex-direction: column; gap: 20px; }
+    
+    /* Clock */
+    .clock-card {
+        flex: 0.65; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: linear-gradient(180deg, #fff 0%, #f8faff 100%);
+    }
+    #clock { font-family: 'JetBrains Mono', monospace; font-size: 46px; font-weight: 700; color: var(--brand-dark); line-height: 1; }
+    #date { font-size: 16px; font-weight: 600; color: var(--text-muted); margin-top: 8px; text-transform: uppercase; }
+
+    /* Weather */
+    .weather-card {
+        flex: 0.65; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 14px;
+        position: relative; overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.6); border-top: 1px solid rgba(255, 255, 255, 0.9);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    }
+    .weather-card::after {
+        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 50%;
+        background: linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+        pointer-events: none; z-index: 1;
+    }
+    #weather-content { position: relative; z-index: 5; display: flex; align-items: center; gap: 12px; }
+    .weather-icon { width: 54px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.2)); }
+    .temp-big { font-size: 34px; font-weight: 800; line-height: 1; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+    .weather-text { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .sun-reminder {
+        font-size: 11px;
+        font-weight: 700;
+        color: rgba(6, 131, 248, 0.9);
+        margin-top: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        animation: pulse 3s infinite;
+    }
+
+    /* Weather Gradients */
+    .weather-sunny { background-color: #fdbb2d; background-image: radial-gradient(at 90% 10%, #2980b9 0px, transparent 50%), radial-gradient(at 10% 90%, #fdbb2d 0px, transparent 50%), radial-gradient(at 50% 50%, #6dd5fa 0px, transparent 50%); }
+    .weather-cloudy { background-color: #bdc3c7; background-image: radial-gradient(at 0% 0%, #2c3e50 0px, transparent 50%), radial-gradient(at 100% 100%, #bdc3c7 0px, transparent 50%), radial-gradient(at 50% 50%, #8ca6db 0px, transparent 50%); }
+    .weather-rain { background-color: #2c3e50; background-image: radial-gradient(at 80% 0%, #4ca1af 0px, transparent 50%), radial-gradient(at 0% 100%, #2c3e50 0px, transparent 50%), radial-gradient(at 0% 0%, #134e5e 0px, transparent 50%); }
+    .weather-storm { background-color: #232526; background-image: radial-gradient(at 20% 20%, #414345 0px, transparent 50%), radial-gradient(at 80% 80%, #232526 0px, transparent 50%), radial-gradient(at 50% 50%, #4b134f 0px, transparent 50%); }
+    .weather-snow { background-color: #e6dada; background-image: radial-gradient(at 0% 0%, #274046 0px, transparent 50%), radial-gradient(at 100% 0%, #e6dada 0px, transparent 50%), radial-gradient(at 100% 100%, #83a4d4 0px, transparent 50%); }
+    .weather-mist { background-color: #606c88; background-image: radial-gradient(at 50% 0%, #B0DACD 0px, transparent 50%), radial-gradient(at 50% 100%, #3f4c6b 0px, transparent 50%); }
+
+    /* QR Box */
+    .qr-box { 
+        flex: none; margin-top: 10px; background: var(--brand-dark); color: #fff; 
+        display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px;
+        text-align: left; padding: 10px; position: relative; overflow: hidden;
+    }
+    .qr-frame {
+        background: white; padding: 6px; border-radius: 10px; width: 138px; height: 138px; 
+        flex: 0 0 138px; display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 8px 22px rgba(0,0,0,0.25); z-index: 2;
+    }
+    .qr-frame img { width: 100%; height: 100%; object-fit: contain; }
+    .qr-text-group { z-index: 2; min-width: 0; }
+    .qr-box h4 { margin: 0 0 5px; font-family: 'Oswald'; font-size: 21px; line-height: 1.05; color: var(--brand-accent); text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    .qr-box p { margin: 0; font-size: 12px; line-height: 1.25; opacity: 0.9; font-weight: 500; }
+
+    /* --- COL 2: CENTER CAROUSEL (55% Width) --- */
+    .col-map { 
+        flex: 55%; position: relative; overflow: hidden; 
+        background: #000; border: none;
+    }
+    
+    .center-slide {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        opacity: 0; visibility: hidden; transition: opacity 1.2s ease-in-out, visibility 1.2s;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .center-slide.active-view { opacity: 1; visibility: visible; z-index: 10; }
+
+    /* Map */
+    #view-map { background: #eef2f5; }
+    #map-viz { width: 100%; height: 100%; }
+    .city-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; fill: #002b55; text-shadow: 2px 0 #fff, -2px 0 #fff, 0 2px #fff, 0 -2px #fff; pointer-events: none; }
+    .attack-line { fill: none; stroke-linecap: round; filter: drop-shadow(0 0 2px rgba(0,0,0,0.3)); }
+    .ripple { fill: none; stroke-width: 2px; opacity: 0; }
+
+    /* Media */
+    .video-content { width: 100%; height: 100%; object-fit: contain; }
+    #view-video { background: #000; }
+    #view-image { overflow: hidden; }
+    .blur-bg {
+        position: absolute; top: -10%; left: -10%; width: 120%; height: 120%;
+        background-size: cover; background-position: center;
+        filter: blur(25px) brightness(0.7); z-index: 1;
+        transition: background-image 1s ease;
+    }
+    .sharp-fg {
+        position: relative; z-index: 2; max-width: 95%; max-height: 90%;
+        object-fit: contain; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        border-radius: 8px; transition: transform 10s ease;
+    }
+    .ken-burns { animation: slowZoom 15s infinite alternate; }
+    @keyframes slowZoom { 0% { transform: scale(1); } 100% { transform: scale(1.05); } }
+
+    /* --- COL 3: HUB (25% Width) --- */
+    /* --- COL 3: HUB (25% Width) --- */
+    .col-hub { 
+        flex: 25%; position: relative; overflow: hidden; 
+        display: flex; flex-direction: column;
+        background: #fff; padding: 20px;
+    }
+    .hub-title {
+        font-family: 'Oswald', sans-serif; font-size: 28px; color: var(--brand-dark);
+        border-bottom: 4px solid var(--brand-blue); padding-bottom: 8px; margin-bottom: 10px;
+        display: flex; justify-content: space-between; align-items: center; flex: none;
+    }
+    #schedule-container { flex: 0 1 auto; max-height: 100%; overflow-y: auto; padding: 2px 5px 2px 2px; scroll-behavior: smooth; }
+    #schedule-container.compact-day { flex: 0 0 auto; }
+    #schedule-container.busy-day { flex: 1 1 auto; }
+    #schedule-container::-webkit-scrollbar { display: none; }
+    
+    .event-row {
+        display: flex; align-items: stretch; background: #fff; border: 1px solid #e0e4e8;
+        border-left: 8px solid #ccc; 
+        margin-bottom: 12px; border-radius: 12px;
+        min-height: 116px; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.03); transition: all 0.3s ease; position: relative; overflow: hidden;
+    }
+    .event-time {
+        width: 90px; background: #f8f9fa; font-family: 'JetBrains Mono'; font-weight: 700; color: var(--text-main);
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        font-size: 20px; border-right: 1px solid #eee; padding: 8px;
+    }
+    .event-time span.end-time { font-size: 15px; color: #666; font-weight: 500; margin-top: 4px; }
+    .event-details { flex: 1; padding: 10px 15px; display: flex; flex-direction: column; justify-content: center; }
+    .event-details h4 { margin: 0 0 5px 0; font-size: 21px; color: var(--brand-dark); font-weight: 800; line-height: 1.18; }
+    .event-details p { margin: 0; font-size: 16px; color: #444; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    
+    .event-row.status-active {
+        border-left-color: var(--success-color); background: #f0fdf4; border: 2px solid var(--success-color);
+        box-shadow: 0 10px 25px rgba(46, 125, 50, 0.15); z-index: 2;
+    }
+    .event-row.status-active h4 { color: var(--success-color); }
+    .progress-bg { position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(0,0,0,0.1); }
+    .progress-fill { height: 100%; background: var(--success-color); width: 0%; transition: width 1s linear; }
+    
+    /* THE NEW TEXT STYLE */
+    .progress-stats { 
+        font-family: 'JetBrains Mono', monospace; 
+        font-size: 11px; 
+        color: var(--success-color); 
+        font-weight: 800; 
+        margin-left: 10px; 
+        letter-spacing: 0.5px;
+    }
+
+    .event-row.status-next { border-left-color: var(--warning-color); background: #fff8e1; border: 1px solid var(--warning-color); }
+    .event-row.status-past { opacity: 0.5; filter: grayscale(0.8); border-left-color: #999; }
+
+    .badge { padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; color: white; display: inline-block; }
+    .badge-live { background: var(--success-color); animation: pulse 2s infinite; }
+    .badge-next { background: var(--warning-color); color: #000; }
+    
+    /* News mini-cards (Sidebar live feeds) */
+    .cyber-news-card {
+        background: linear-gradient(135deg, #2a0a0a 0%, #5c0014 100%);
+        color: #fff; padding: 16px; border-radius: 12px;
+        border-left: 6px solid var(--alert-color); overflow: hidden; position: relative;
+        display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
+    }
+    .cyber-news-card::after {
+        content: "CYBER"; position: absolute; right: -10px; top: -12px;
+        font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 800;
+        color: rgba(211, 47, 47, 0.14);
+    }
+    .ai-news-card {
+        background: linear-gradient(135deg, #0a1628 0%, #002b55 60%, #003f5c 100%);
+        color: #fff; padding: 16px; border-radius: 12px;
+        border-left: 6px solid var(--brand-accent); overflow: hidden; position: relative;
+        display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
+    }
+    .ai-news-card::after {
+        content: "AI \00B7 DS"; position: absolute; right: -10px; top: -12px;
+        font-family: 'JetBrains Mono', monospace; font-size: 34px; font-weight: 800;
+        color: rgba(0, 210, 255, 0.12);
+    }
+    .news-label {
+        font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+        margin-bottom: 10px; position: relative; z-index: 2; flex: 0 0 auto;
+    }
+    .cyber-news-card .news-label { color: #ff8a80; }
+    .ai-news-card .news-label { color: var(--brand-accent); }
+    .news-list {
+        flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
+        justify-content: space-evenly; gap: 10px; position: relative; z-index: 2; overflow: hidden;
+    }
+    .news-item { flex: 0 1 auto; }
+    .news-item + .news-item { padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.14); }
+    .news-item-title {
+        font-family: 'Oswald', sans-serif; font-size: 15px; font-weight: 700; line-height: 1.3;
+        color: #fff; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .news-item-meta {
+        font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.6);
+        text-transform: uppercase; letter-spacing: 0.4px; display: flex;
+        justify-content: space-between; gap: 8px; margin-top: 5px;
+    }
+
+    @keyframes blink { 50% { opacity: 0.4; } }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="header-brand">
+      <img alt="Logo" id="logo" src="./Present Pictures/institute_logo.png"/>
+      <div id="header-title">ADCI | Information Hub</div>
+  </div>
+  <div class="ticker-wrap">
+      <div class="live-dot"></div> LIVE NETWORK STATUS: OPTIMAL
+  </div>
+</div>
+
+<div id="main">
+  <!-- SIDEBAR -->
+  <div class="col-sidebar">
+      <div class="info-card clock-card">
+          <div id="clock">00:00</div>
+          <div id="date">Monday, Jan 1</div>
+      </div>
+      
+      <div class="info-card weather-card" id="weather-card-bg">
+         <div id="weather-content">Loading...</div>
+      </div>
+
+      
+      <div class="info-card cyber-news-card">
+          <div class="news-label">Live Cyber Security News</div>
+          <div id="cyber-news-list" class="news-list">
+              <div class="news-item">
+                  <div class="news-item-title">Loading latest cybersecurity headlines...</div>
+                  <div class="news-item-meta"><span>The Hacker News / BleepingComputer</span><span>Live Feed</span></div>
+              </div>
+          </div>
+      </div>
+
+      <div class="info-card ai-news-card">
+          <div class="news-label">Live AI &amp; Data Science News</div>
+          <div id="ai-news-list" class="news-list">
+              <div class="news-item">
+                  <div class="news-item-title">Loading latest AI &amp; data science headlines...</div>
+                  <div class="news-item-meta"><span>arXiv / Hacker News</span><span>Live Feed</span></div>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <!-- CENTER CAROUSEL -->
+  <div class="col-map" id="center-carousel">
+      <!-- 1. MAP -->
+      <div class="center-slide active-view" id="view-map">
+          <div id="map-viz"></div>
+      </div>
+      <!-- 2. PHOTOS -->
+      <div class="center-slide" id="view-image">
+          <div id="img-bg" class="blur-bg"></div>
+          <img id="img-fg" src="" class="sharp-fg ken-burns">
+      </div>
+      <!-- 3. VIDEO -->
+      <div class="center-slide" id="view-video">
+          <video class="video-content" id="promo-video" muted playsinline>
+              <source id="promo-video-source" src="./Present Pictures/Data-1.mp4" type="video/mp4">
+          </video>
+      </div>
+      
+  </div>
+
+  <!-- HUB -->
+  <div class="col-hub">
+      <div class="hub-title">TODAY'S SCHEDULE</div>
+      <div id="schedule-container"></div>
+      <div class="info-card qr-box">
+          <div class="qr-frame">
+             <img src="./Present Pictures/QRCode.JPG" alt="Student Portal QR" 
+                  onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=ADCI_Portal_Fallback'">
+          </div>
+          <div class="qr-text-group">
+              <h4>STUDENT SYSTEM</h4>
+              <p>Scan for portal access</p>
+          </div>
+      </div>
+  </div>
+</div>
+
+<script>
+/* --- AUTO REFRESH SYSTEM --- */
+// Refresh the entire page every 13 hours (46,800,000 ms)
+setTimeout(() => {
+    window.location.reload();
+}, 46800000);
+
+
+/* --- CONFIGURATION --- */
+const CONFIG = {
+    weatherKey: "a5bbc068379441b89cf24203251803", 
+    weatherCity: "Perth",
+    mapDuration: 30000, 
+    photoDuration: 6000,
+    
+    photos: [
+        "Orientation-2026-1.png","Orientation-2026-2.png","Building.jpg", "Campus Logo.jpg", "Classroom 1.jpg", "Classroom 2.jpg",
+        "Enterance.jpg", "Kitchen.jpg", "Meeting Room.jpg", "orientation.jpg","orientation2.jpg", "orientation3.jpg", "orientation4.jpg",
+        "Designer (1).png", "ds2.jpg",
+    ],
+
+    videos: [
+        "Data-1.mp4",
+        "Hacking-1.mp4",
+        "Data-2.mp4",
+        "Hacking-2.mp4",
+        "Hacking-3.mp4"
+    ],
+    
+    schedule: {
+       "Monday": [
+            { time: "09:30", end: "12:30", name: "CSC203: Data Structure and Algorithms", room: "ADCI Classroom 1", lect: "Malik Asim" },
+            { time: "09:30", end: "12:30", name: "CSC101: Intro to Programming", room: "ADCI Classroom 2", lect: "Lucy Yuan" },
+            { time: "13:30", end: "16:30", name: "ARI101: Intro to Artificial Intelligence", room: "ADCI Classroom 1", lect: "Zia Ur Rehman" },
+            { time: "13:30", end: "16:30", name: "MAT101: Intro to Mathematics", room: "ADCI Classroom 2", lect: "Lucy Yuan" }
+        ],
+        "Tuesday": [
+            { time: "09:00", end: "12:00", name: "CYB204: Ethical Hacking", room: "ADCI Classroom 1", lect: "Nima Moktan" },
+            { time: "09:00", end: "12:00", name: "DNA102: Intro to Database Systems", room: "KCBT Classroom 12 ", lect: "Uzma Malik" },
+            { time: "13:00", end: "16:00", name: "SEC102: Information Risk and Security", room: "ADCI Classroom 1", lect: "Dr Anna Griffin" },
+            { time: "13:00", end: "16:00", name: "CYB203: Security System Design", room: "ADCI Classroom 2", lect: "Mohammad Qatatsha" },
+            { time: "17:00", end: "20:00", name: "SEC303: Security Auditing and Compliance", room: "Online" },
+            { time: "17:00", end: "20:00", name: "ARI303: Intelligent Bot Services", room: "Online", lect: "Zia Ur Rehman" }
+        ],
+        "Wednesday": [
+            { time: "09:00", end: "12:00", name: "CYB205: Cyber Forensics", room: "ADCI Classroom 1", lect: "Uzma Malik" },
+            { time: "09:00", end: "12:00", name: "MAT203: Graph Theory", room: "ADCI Classroom 2", lect: "Dr Alfred Tseng" },
+            { time: "13:00", end: "16:00", name: "CSC204: Access Control and Authentication", room: "ADCI Classroom 1", lect: "Uzma Malik" },
+            { time: "13:00", end: "16:00", name: "ARI202: Machine Learning", room: "ADCI Classroom 2", lect: "Nima Mirnateghi" }
+        ],
+        "Thursday": [
+            { time: "09:00", end: "12:00", name: "ORG304: Professional Case Study", room: "ADCI Classroom 1", lect: "Dr Alfred Tseng" },
+            { time: "09:00", end: "12:00", name: "ORG201: Data Governance", room: "ADCI Classroom 2", lect: "Dr Maen Hawari" },
+            { time: "13:00", end: "16:00", name: "CAP301 & CAP302: Industry Capstone", room: "ADCI Classroom 1", lect: "Dr Anna Griffin" },
+            { time: "13:00", end: "16:00", name: "DNA203: Big Data Infrastructure and Architecture", room: "ADCI Classroom 2", lect: "Chloe Wu" }
+        ],
+        "Friday": [
+            { time: "09:00", end: "12:00", name: "CYB308: Incident Response and Disaster Management", room: "ADCI Classroom 1", lect: "Dr Maen Hawari" },
+            { time: "13:00", end: "16:00", name: "DNA305: Data Visualisation", room: "ADCI Classroom 1", lect: "Chloe Wu" }
+        ]
+    }
+};
+
+/* --- CAROUSEL ENGINE --- */
+let playlistIndex = 0; 
+let rotationTimer;
+const views = {
+    map: document.getElementById('view-map'),
+    image: document.getElementById('view-image'),
+    video: document.getElementById('view-video')
+};
+const imgFg = document.getElementById('img-fg');
+const imgBg = document.getElementById('img-bg');
+const videoElement = document.getElementById('promo-video');
+const videoSource = document.getElementById('promo-video-source');
+
+function playNextSlide() {
+    Object.values(views).forEach(el => el.classList.remove('active-view'));
+    clearTimeout(rotationTimer);
+
+    if (playlistIndex === 0) {
+        views.map.classList.add('active-view');
+        setTimeout(drawMap, 100); 
+        rotationTimer = setTimeout(nextIndex, CONFIG.mapDuration);
+    } 
+    else if (playlistIndex > 0 && playlistIndex <= CONFIG.videos.length) {
+        const videoIdx = playlistIndex - 1;
+        const src = "./Present Pictures/" + CONFIG.videos[videoIdx];
+        views.video.classList.add('active-view');
+        if (videoSource.getAttribute('src') !== src) {
+            videoSource.setAttribute('src', src);
+            videoElement.load();
+        }
+        videoElement.currentTime = 0;
+        let playPromise = videoElement.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                videoElement.onended = () => { nextIndex(); };
+            }).catch(err => { nextIndex(); });
+        }
+    } 
+    else {
+        let photoIdx = playlistIndex - CONFIG.videos.length - 1;
+        if (photoIdx < CONFIG.photos.length) {
+            views.image.classList.add('active-view');
+            const src = "./Present Pictures/" + CONFIG.photos[photoIdx];
+            imgFg.src = src;
+            imgBg.style.backgroundImage = `url('${src}')`;
+            imgFg.classList.remove('ken-burns');
+            void imgFg.offsetWidth;
+            imgFg.classList.add('ken-burns');
+            rotationTimer = setTimeout(nextIndex, CONFIG.photoDuration);
+        } else {
+            playlistIndex = -1; 
+            nextIndex();
+        }
+    }
+}
+function nextIndex() { playlistIndex++; playNextSlide(); }
+playNextSlide();
+
+/* --- CLOCK --- */
+function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    document.getElementById('date').innerText = now.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' });
+}
+setInterval(updateClock, 1000); updateClock();
+
+/* --- WEATHER (Auto Refresh 10 mins) --- */
+function fetchWeather() {
+    fetch(`https://api.weatherapi.com/v1/current.json?key=${CONFIG.weatherKey}&q=${CONFIG.weatherCity}`)
+    .then(r => r.json()).then(d => {
+        const card = document.getElementById('weather-card-bg');
+        const txt = d.current.condition.text.toLowerCase();
+        card.className = 'info-card weather-card';
+        if (txt.includes("rain") || txt.includes("drizzle") || txt.includes("shower")) card.classList.add("weather-rain");
+        else if (txt.includes("thunder") || txt.includes("storm")) card.classList.add("weather-storm");
+        else if (txt.includes("snow") || txt.includes("ice")) card.classList.add("weather-snow");
+        else if (txt.includes("cloud") || txt.includes("overcast")) card.classList.add("weather-cloudy");
+        else if (txt.includes("mist") || txt.includes("fog")) card.classList.add("weather-mist");
+        else card.classList.add("weather-sunny"); 
+
+        document.getElementById('weather-content').innerHTML = `
+            <img src="https:${d.current.condition.icon}" class="weather-icon">
+            <div class="weather-info">
+                <div class="temp-big">${Math.round(d.current.temp_c)}°C</div>
+                <div class="weather-text">${d.current.condition.text}</div>
+                
+            </div>
+        `;
+    }).catch(e => {});
+}
+fetchWeather(); 
+// Update weather every 10 minutes (600,000ms)
+setInterval(fetchWeather, 600000);
+
+/* --- SHARED FETCH HELPER --- */
+function fetchJsonWithTimeout(url, timeoutMs) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { cache: "no-store", signal: controller.signal })
+        .then(response => {
+            clearTimeout(timer);
+            if (!response.ok) throw new Error("Feed returned " + response.status);
+            return response.json();
+        })
+        .catch(error => {
+            clearTimeout(timer);
+            throw error;
+        });
+}
+
+/* --- CYBER NEWS FEED (The Hacker News + BleepingComputer, via CORS proxy) --- */
+const CYBER_NEWS_FEEDS = [
+    { url: "https://feeds.feedburner.com/TheHackersNews", source: "The Hacker News" },
+    { url: "https://www.bleepingcomputer.com/feed/", source: "BleepingComputer" }
+];
+let cyberNewsItems = [];
+let cyberNewsIndex = 0;
+
+function proxiedUrl(url) {
+    return "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+}
+
+function fetchTextWithTimeout(url, timeoutMs) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { cache: "no-store", signal: controller.signal })
+        .then(response => {
+            clearTimeout(timer);
+            if (!response.ok) throw new Error("Feed returned " + response.status);
+            return response.text();
+        })
+        .catch(error => { clearTimeout(timer); throw error; });
+}
+
+function parseRssItems(xmlText, sourceName, limit) {
+    const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+    const items = Array.from(doc.querySelectorAll("item")).slice(0, limit || 6);
+    return items.map(item => ({
+        title: (item.querySelector("title") ? item.querySelector("title").textContent : "").trim(),
+        link: item.querySelector("link") ? item.querySelector("link").textContent.trim() : "",
+        pubDate: item.querySelector("pubDate") ? item.querySelector("pubDate").textContent.trim() : "",
+        source: sourceName
+    })).filter(i => i.title);
+}
+
+function timeAgo(dateStr) {
+    if (!dateStr) return "Live Feed";
+    const d = new Date(dateStr);
+    if (isNaN(d)) return "Live Feed";
+    const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return mins + "m ago";
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + "h ago";
+    return Math.floor(hrs / 24) + "d ago";
+}
+
+function escapeHtml(str) {
+    return String(str || "")
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function renderNewsList(containerId, items, index, count, emptyText, emptySource) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+
+    if (!items.length) {
+        el.innerHTML = `
+            <div class="news-item">
+                <div class="news-item-title">${emptyText}</div>
+                <div class="news-item-meta"><span>${emptySource}</span><span>Retrying</span></div>
+            </div>`;
+        return;
+    }
+
+    let html = "";
+    const shown = Math.min(count, items.length);
+    for (let i = 0; i < shown; i++) {
+        const item = items[(index + i) % items.length];
+        html += `
+            <div class="news-item">
+                <div class="news-item-title">${escapeHtml(item.title)}</div>
+                <div class="news-item-meta"><span>${escapeHtml(item.source)}</span><span>${timeAgo(item.pubDate)}</span></div>
+            </div>`;
+    }
+    el.innerHTML = html;
+}
+
+function showCyberNewsItem() {
+    renderNewsList("cyber-news-list", cyberNewsItems, cyberNewsIndex, 3,
+        "Live feed temporarily unavailable. Retrying automatically.", "Cyber News");
+    cyberNewsIndex++;
+}
+
+function fetchCyberNews() {
+    Promise.all(CYBER_NEWS_FEEDS.map(feed =>
+        fetchTextWithTimeout(proxiedUrl(feed.url), 9000)
+            .then(xml => parseRssItems(xml, feed.source, 6))
+            .catch(() => [])
+    )).then(results => {
+        const merged = results.flat().sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+        if (merged.length) {
+            cyberNewsItems = merged.slice(0, 10);
+            cyberNewsIndex = 0;
+        }
+        showCyberNewsItem();
+    }).catch(() => showCyberNewsItem());
+}
+fetchCyberNews();
+setInterval(showCyberNewsItem, 9000);
+setInterval(fetchCyberNews, 1800000);
+
+/* --- AI / DATA SCIENCE NEWS FEED (arXiv + Hacker News, via Algolia + CORS proxy) --- */
+const ARXIV_FEED_URL = "http://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.LG&sortBy=submittedDate&sortOrder=descending&max_results=8";
+const HN_AI_QUERIES = [
+    "https://hn.algolia.com/api/v1/search_by_date?tags=story&query=artificial%20intelligence&hitsPerPage=6",
+    "https://hn.algolia.com/api/v1/search_by_date?tags=story&query=machine%20learning&hitsPerPage=6"
+];
+let aiNewsItems = [];
+let aiNewsIndex = 0;
+
+function parseArxivItems(xmlText, limit) {
+    const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+    const entries = Array.from(doc.querySelectorAll("entry")).slice(0, limit || 8);
+    return entries.map(entry => {
+        const linkEl = entry.querySelector("link[rel='alternate']") || entry.querySelector("link");
+        return {
+            title: (entry.querySelector("title") ? entry.querySelector("title").textContent : "").replace(/\s+/g, " ").trim(),
+            link: linkEl ? linkEl.getAttribute("href") : "",
+            pubDate: entry.querySelector("published") ? entry.querySelector("published").textContent.trim() : "",
+            source: "arXiv"
+        };
+    }).filter(i => i.title);
+}
+
+function showAiNewsItem() {
+    renderNewsList("ai-news-list", aiNewsItems, aiNewsIndex, 3,
+        "Live feed temporarily unavailable. Retrying automatically.", "AI / Data Science");
+    aiNewsIndex++;
+}
+
+function fetchAiNews() {
+    const arxivPromise = fetchTextWithTimeout(proxiedUrl(ARXIV_FEED_URL), 9000)
+        .then(xml => parseArxivItems(xml, 8))
+        .catch(() => []);
+
+    const hnPromise = Promise.all(HN_AI_QUERIES.map(url =>
+        fetchJsonWithTimeout(url, 9000)
+            .then(data => Array.isArray(data.hits) ? data.hits.map(hit => ({
+                title: hit.title || hit.story_title || "",
+                link: hit.url || hit.story_url || ("https://news.ycombinator.com/item?id=" + hit.objectID),
+                pubDate: hit.created_at || "",
+                source: "Hacker News"
+            })) : [])
+            .catch(() => [])
+    )).then(arr => arr.flat());
+
+    Promise.all([arxivPromise, hnPromise]).then(([arxivItems, hnItems]) => {
+        const seen = new Set();
+        const merged = arxivItems.concat(hnItems)
+            .filter(i => i.title && !seen.has(i.title) && seen.add(i.title))
+            .sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+        if (merged.length) {
+            aiNewsItems = merged.slice(0, 12);
+            aiNewsIndex = 0;
+        }
+        showAiNewsItem();
+    }).catch(() => showAiNewsItem());
+}
+fetchAiNews();
+setInterval(showAiNewsItem, 9500);
+setInterval(fetchAiNews, 1800000);
+
+/* --- TIMETABLE --- */
+
+function renderSchedule() {
+    try {
+        const container = document.getElementById('schedule-container');
+        if(!container) return;
+        const dNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+        const today = dNames[new Date().getDay()];
+        let events = CONFIG.schedule[today] || [];
+        container.classList.add("busy-day");
+        container.innerHTML = "";
+
+        if(events.length === 0) {
+            container.innerHTML = `<div style="text-align:center; margin-top:60px; color:#888;"><div style="font-size:50px; margin-bottom:20px;">☕</div><div style="font-size:24px; font-weight:600;">No classes scheduled</div></div>`;
+            return;
+        }
+
+        events.sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+        const now = new Date();
+        const currentHr = now.getHours() + now.getMinutes()/60;
+
+        events.forEach(ev => {
+            let [sH, sM] = ev.time.split(":").map(Number);
+            let [eH, eM] = ev.end.split(":").map(Number);
+            let startVal = sH + sM/60;
+            let endVal = eH + eM/60;
+            let duration = endVal - startVal;
+
+            let isActive = (currentHr >= startVal && currentHr < endVal);
+            let statusClass = "";
+            let badgeHtml = "";
+            let progressHtml = "";
+            let statsHtml = "";
+
+            if (currentHr >= endVal) {
+                statusClass = "status-past";
+                badgeHtml = `<span class="badge" style="background:#ccc; color:#555;">Ended</span>`;
+            } else if (isActive) {
+                statusClass = "status-active";
+                badgeHtml = `<span class="badge badge-live">● LIVE NOW</span>`;
+                
+                // MATH FOR 45% | 1/3 hrs
+                let elapsed = currentHr - startVal;
+                let pct = Math.min(100, Math.max(0, (elapsed / duration) * 100));
+                let currentHrBlock = Math.floor(elapsed) + 1;
+                let totalHrBlock = Math.ceil(duration);
+
+                statsHtml = `<span class="progress-stats">${Math.round(pct)}% | ${currentHrBlock}/${totalHrBlock} hrs</span>`;
+                progressHtml = `<div class="progress-bg"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+            } else {
+                statusClass = "status-next";
+                badgeHtml = `<span class="badge badge-next">UPCOMING</span>`;
+            }
+
+            container.innerHTML += `
+            <div class="event-row ${statusClass}">
+                ${progressHtml}
+                <div class="event-time"><span>${ev.time}</span><span class="end-time">${ev.end}</span></div>
+                <div class="event-details">
+                    <h4>${ev.name}</h4>
+                    <p>📍 ${ev.room}${ev.lect ? " &nbsp;\u00B7&nbsp; \uD83D\uDC64 " + ev.lect : ""} &nbsp; ${badgeHtml} ${statsHtml}</p>
+                </div>
+            </div>`;
+        });
+    } catch(error) { console.error(error); }
+}
+renderSchedule(); setInterval(renderSchedule,3000);
+function autoScrollTimetable() {
+    const el = document.getElementById('schedule-container');
+    if(el.scrollHeight > el.clientHeight) {
+        if(el.scrollTop + el.clientHeight >= el.scrollHeight - 5) el.scrollTo({ top: 0, behavior: 'smooth' });
+        else el.scrollBy({ top: 100, behavior: 'smooth' });
+    }
+}
+setInterval(autoScrollTimetable, 10000);
+
+/* --- MAP --- */
+var mapEl = document.getElementById("map-viz");
+var proj, path;
+var attacks = [];
+var ripples = [];
+var dm;
+
+function drawMap() {
+    if(mapEl.innerHTML !== "" && !document.getElementById('view-map').classList.contains('active-view')) return;
+    mapEl.innerHTML = ""; attacks = []; ripples = [];
+
+    dm = new Datamap({
+        element: mapEl, 
+        projection: 'orthographic',
+        setProjection: function(el) {
+            var h = el.offsetHeight; 
+            var w = el.offsetWidth;
+            var radius = Math.min(h, w) / 2.2;
+            proj = d3.geo.orthographic().scale(radius).translate([w / 2, h / 2]).clipAngle(90);
+            path = d3.geo.path().projection(proj);
+            d3.select("svg circle").attr("r", radius).attr("cx", w / 2).attr("cy", h / 2);
+            return { projection: proj, path: path };
+        },
+        fills: { defaultFill: '#d0d6db' },
+        geographyConfig: { borderColor: '#ffffff', borderWidth: 1, highlightFillColor: '#b8c2cc', highlightBorderColor: '#fff' }
+    });
+
+    var svg = d3.select("svg");
+    svg.insert("circle", ":first-child").attr("cx", "50%").attr("cy", "50%").attr("r", "1").style("fill", "#e3e9ef");
+    window.mapLayer = svg.append("g").attr("id", "attacks");
+    window.rippleLayer = svg.append("g").attr("id", "ripples");
+    window.labelLayer = svg.append("g").attr("id", "labels");
+    window.textElements = window.labelLayer.selectAll("text").data(cityLabels).enter().append("text").attr("class", "city-label").text(d=>d.n).attr("text-anchor","middle");
+}
+
+const cityLabels = [
+  {n:"PERTH", lat:-31.95, lng:115.86}, {n:"SYDNEY", lat:-33.86, lng:151.20}, {n:"TOKYO", lat:35.68, lng:139.69}, 
+  {n:"BEIJING", lat:39.90, lng:116.40}, {n:"SINGAPORE", lat:1.35, lng:103.81}, {n:"LONDON", lat:51.50, lng:-0.12}, 
+  {n:"NEW YORK", lat:40.71, lng:-74.00}, {n:"SAO PAULO", lat:-23.55, lng:-46.63}
+];
+
+window.addEventListener('resize', function() { clearTimeout(window.resizeTimer); window.resizeTimer = setTimeout(drawMap, 250); });
+
+var t0 = Date.now();
+d3.timer(function() {
+    var t = Date.now() - t0;
+    if(proj && document.getElementById('view-map').classList.contains('active-view')) {
+        proj.rotate([t * 0.01, -15]); 
+        d3.selectAll("path.datamaps-subunit").attr("d", path);
+        if(window.textElements) {
+            window.textElements.each(function(d) {
+                var center = proj.invert([mapEl.offsetWidth / 2, mapEl.offsetHeight / 2]);
+                var dist = d3.geo.distance(center, [d.lng, d.lat]);
+                if(dist < 1.5) {
+                    var p = proj([d.lng, d.lat]);
+                    d3.select(this).style("display","block").attr("x", p[0]).attr("y", p[1] - 8);
+                } else { d3.select(this).style("display","none"); }
+            });
+        }
+        var lines = window.mapLayer.selectAll("path.attack-line").data(attacks);
+        lines.enter().append("path").attr("class", "attack-line").style("fill", "none").style("stroke-linecap","round").style("opacity", 0.8);
+        lines.attr("d", path).style("stroke", d => d.color).style("stroke-width", d => d.width).style("stroke-dasharray", d => d.dash).style("stroke-dashoffset", d => -(t * d.speed) % 100);
+        lines.exit().remove();
+        var circles = window.rippleLayer.selectAll("path.ripple").data(ripples);
+        circles.enter().append("path").attr("class","ripple").style("stroke", d=>d.color);
+        circles.attr("d", function(d) { return d3.geo.path().projection(proj)(d3.geo.circle().origin([d.lng, d.lat]).angle(d.radius)()); }).style("opacity", d => d.opacity).style("stroke-width", d => (d.opacity * 2) + "px");
+        ripples.forEach(r => { r.radius += 0.2; r.opacity -= 0.02; });
+        ripples = ripples.filter(r => r.opacity > 0);
+    }
+});
+
+function launchAttack() {
+    try {
+        if(!document.getElementById('view-map').classList.contains('active-view')) return;
+        let s = cityLabels[Math.floor(Math.random()*cityLabels.length)];
+        let d = cityLabels[Math.floor(Math.random()*cityLabels.length)];
+        if(s!==d) {
+            let id = Date.now() + Math.random();
+            let rand = Math.random();
+            let profile;
+            if(rand < 0.4)      profile = {color: "#d32f2f", width: 3, dash: "none", speed: 0.15}; 
+            else if(rand < 0.8) profile = {color: "#0056b3", width: 2, dash: "5,5", speed: 0.12}; 
+            else                profile = {color: "#6200ea", width: 2, dash: "2,4", speed: 0.18};  
+            attacks.push({ type: "Feature", geometry: {type:"LineString", coordinates:[[s.lng,s.lat],[d.lng,d.lat]]}, ...profile, id:id });
+            setTimeout(() => { ripples.push({ lat: d.lat, lng: d.lng, radius: 0.5, opacity: 1, color: profile.color }); }, 1000);
+            setTimeout(() => attacks = attacks.filter(a => a.id !== id), 2500);
+        }
+    } catch(e) {}
+}
+setInterval(launchAttack, 800);
+</script>
+</body>
+</html>

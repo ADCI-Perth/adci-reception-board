@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ADCI | Exam Week Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.19/topojson.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datamaps/0.5.1/datamaps.world.min.js"></script>
+
+<style>
+    /* --- VARIABLES --- */
+    :root {
+      --bg-body: #ecf0f3;
+      --bg-card: #ffffff;
+      --brand-dark: #002b55;       
+      --brand-blue: #0056b3;       
+      --brand-accent: #00d2ff;     
+      --alert-color: #d32f2f;      
+      --success-color: #2e7d32;
+      --warning-color: #ed6c02;
+      --text-main: #111111;        
+      --text-muted: #555555;
+      --shadow-card: 0 10px 30px rgba(0, 43, 85, 0.1);
+      --border-radius: 16px;
+    }
+
+    body {
+      margin: 0; font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      color: var(--text-main);
+      height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* --- HEADER --- */
+    #header {
+      height: 110px; flex: none;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 50px; 
+      border-bottom: 5px solid var(--brand-dark);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      z-index: 100;
+    }
+    .header-brand { display: flex; align-items: center; gap: 25px; }
+    #logo { height: 80px; }
+    #header-title {
+      font-family: 'Oswald', sans-serif; font-size: 42px; color: var(--brand-dark); 
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .ticker-wrap {
+        background: var(--brand-dark); color: #fff; padding: 10px 30px; border-radius: 50px;
+        font-family: 'JetBrains Mono', monospace; font-size: 18px; display: flex; align-items: center;
+        box-shadow: 0 5px 15px rgba(0, 43, 85, 0.3);
+    }
+    .live-dot { width: 12px; height: 12px; background: #00d2ff; border-radius: 50%; margin-right: 12px; animation: blink 1s infinite; }
+
+    /* --- MAIN LAYOUT --- */
+    #main { display: flex; height: calc(100vh - 110px); padding: 25px; gap: 25px; box-sizing: border-box; }
+    
+    .info-card, .col-map, .col-hub {
+        background: var(--bg-card); border-radius: var(--border-radius);
+        box-shadow: var(--shadow-card); border: 1px solid rgba(255,255,255,0.6);
+    }
+
+    /* --- COL 1: SIDEBAR (20%) --- */
+    .col-sidebar { flex: 20%; display: flex; flex-direction: column; gap: 20px; }
+    
+    .clock-card {
+        flex: 0.8; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: linear-gradient(180deg, #fff 0%, #f8faff 100%);
+    }
+    #clock { font-family: 'JetBrains Mono', monospace; font-size: 55px; font-weight: 700; color: var(--brand-dark); line-height: 1; }
+    #date { font-size: 20px; font-weight: 600; color: var(--text-muted); margin-top: 10px; text-transform: uppercase; }
+    
+    .weather-card {
+        flex: 0.8; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 20px;
+        position: relative; overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.6); border-top: 1px solid rgba(255, 255, 255, 0.9);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    }
+    .weather-card::after {
+        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 50%;
+        background: linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+        pointer-events: none; z-index: 1;
+    }
+    #weather-content { position: relative; z-index: 5; display: flex; align-items: center; gap: 15px; }
+    .weather-icon { width: 70px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.2)); }
+    .temp-big { font-size: 42px; font-weight: 800; line-height: 1; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+    .weather-text { font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+    /* Weather Gradients */
+    .weather-sunny { background-color: #fdbb2d; background-image: radial-gradient(at 90% 10%, #2980b9 0px, transparent 50%), radial-gradient(at 10% 90%, #fdbb2d 0px, transparent 50%), radial-gradient(at 50% 50%, #6dd5fa 0px, transparent 50%); }
+    .weather-cloudy { background-color: #bdc3c7; background-image: radial-gradient(at 0% 0%, #2c3e50 0px, transparent 50%), radial-gradient(at 100% 100%, #bdc3c7 0px, transparent 50%), radial-gradient(at 50% 50%, #8ca6db 0px, transparent 50%); }
+    .weather-rain { background-color: #2c3e50; background-image: radial-gradient(at 80% 0%, #4ca1af 0px, transparent 50%), radial-gradient(at 0% 100%, #2c3e50 0px, transparent 50%), radial-gradient(at 0% 0%, #134e5e 0px, transparent 50%); }
+    .weather-storm { background-color: #232526; background-image: radial-gradient(at 20% 20%, #414345 0px, transparent 50%), radial-gradient(at 80% 80%, #232526 0px, transparent 50%), radial-gradient(at 50% 50%, #4b134f 0px, transparent 50%); }
+    .weather-snow { background-color: #e6dada; background-image: radial-gradient(at 0% 0%, #274046 0px, transparent 50%), radial-gradient(at 100% 0%, #e6dada 0px, transparent 50%), radial-gradient(at 100% 100%, #83a4d4 0px, transparent 50%); }
+    .weather-mist { background-color: #606c88; background-image: radial-gradient(at 50% 0%, #B0DACD 0px, transparent 50%), radial-gradient(at 50% 100%, #3f4c6b 0px, transparent 50%); }
+
+    .qr-box { 
+        flex: 1.5; background: var(--brand-dark); color: #fff; 
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; padding: 20px; position: relative; overflow: hidden;
+    }
+    .qr-frame {
+        background: white; padding: 10px; border-radius: 12px; width: 150px; height: 150px; 
+        margin-bottom: 15px; display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 2;
+    }
+    .qr-frame img { width: 100%; height: 100%; object-fit: contain; }
+    .qr-text-group { z-index: 2; }
+    .qr-box h4 { margin: 0 0 5px; font-family: 'Oswald'; font-size: 26px; color: var(--brand-accent); text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    .qr-box p { margin: 0; font-size: 14px; opacity: 0.9; font-weight: 500; }
+
+    /* --- COL 2: CENTER CAROUSEL (55%) --- */
+    .col-map { 
+        flex: 55%; position: relative; overflow: hidden; 
+        background: #000; border: none;
+    }
+    .center-slide {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        opacity: 0; visibility: hidden; transition: opacity 1.2s ease-in-out, visibility 1.2s;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .center-slide.active-view { opacity: 1; visibility: visible; z-index: 10; }
+    #view-map { background: #eef2f5; }
+    #map-viz { width: 100%; height: 100%; }
+    .city-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; fill: #002b55; text-shadow: 2px 0 #fff, -2px 0 #fff, 0 2px #fff, 0 -2px #fff; pointer-events: none; }
+    .attack-line { fill: none; stroke-linecap: round; filter: drop-shadow(0 0 2px rgba(0,0,0,0.3)); }
+    .ripple { fill: none; stroke-width: 2px; opacity: 0; }
+    .video-content { width: 100%; height: 100%; object-fit: contain; }
+    #view-video { background: #000; }
+    .blur-bg { position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; background-size: cover; background-position: center; filter: blur(25px) brightness(0.7); z-index: 1; transition: background-image 1s ease; }
+    .sharp-fg { position: relative; z-index: 2; max-width: 95%; max-height: 90%; object-fit: contain; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border-radius: 8px; transition: transform 10s ease; }
+    .ken-burns { animation: slowZoom 15s infinite alternate; }
+    @keyframes slowZoom { 0% { transform: scale(1); } 100% { transform: scale(1.05); } }
+
+    /* --- COL 3: HUB (25%) --- */
+    .col-hub { 
+        flex: 25%; position: relative; overflow: hidden; 
+        display: flex; flex-direction: column;
+        background: #fff; padding: 20px;
+    }
+    .hub-title {
+        font-family: 'Oswald', sans-serif; font-size: 28px; color: var(--brand-dark);
+        border-bottom: 4px solid var(--alert-color); padding-bottom: 15px; margin-bottom: 20px;
+        display: flex; justify-content: space-between; align-items: center; flex: none;
+    }
+    #schedule-container { flex: 1; overflow-y: auto; padding-right: 5px; scroll-behavior: smooth; }
+    #schedule-container::-webkit-scrollbar { display: none; }
+
+    /* Break Card Styles */
+    .event-row {
+        display: flex; align-items: stretch; background: #fff; border: 1px solid #e0e4e8;
+        border-left: 8px solid #ccc; margin-bottom: 15px; border-radius: 12px;
+        min-height: 100px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); transition: all 0.3s ease; position: relative; overflow: hidden;
+    }
+    .event-time {
+        width: 80px; background: #f8f9fa; font-family: 'JetBrains Mono'; font-weight: 700; color: var(--text-main);
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        font-size: 32px; border-right: 1px solid #eee; padding: 8px;
+    }
+    .event-details { flex: 1; padding: 12px 15px; display: flex; flex-direction: column; justify-content: center; }
+    .event-details h4 { margin: 0 0 5px 0; font-size: 18px; color: var(--brand-dark); font-weight: 800; }
+    .event-details p { margin: 0; font-size: 14px; color: #555; font-weight: 500; line-height: 1.4; }
+    
+    .tuition-free-card {
+        padding: 20px; text-align: center; border-radius: 12px; margin-bottom: 20px;
+        background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%); border: 1px solid var(--alert-color);
+    }
+    .badge { padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; color: white; }
+    .badge-live { background: var(--success-color); animation: pulse 2s infinite; }
+
+    @keyframes blink { 50% { opacity: 0.4; } }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="header-brand">
+      <img alt="Logo" id="logo" src="./Present Pictures/institute_logo.png"/>
+      <div id="header-title">ADCI | Exam Week Hub</div>
+  </div>
+  <div class="ticker-wrap">
+      <div class="live-dot"></div> EXAM WEEK IN PROGRESS — GOOD LUCK TO ALL STUDENTS
+  </div>
+</div>
+
+<div id="main">
+  <div class="col-sidebar">
+      <div class="info-card clock-card">
+          <div id="clock">00:00</div>
+          <div id="date">Monday, Jan 1</div>
+      </div>
+      
+      <div class="info-card weather-card" id="weather-card-bg">
+         <div id="weather-content">Loading...</div>
+      </div>
+      
+      <div class="info-card qr-box">
+          <div class="qr-frame">
+             <img src="./Present Pictures/QRCode.JPG" alt="Student Portal QR" 
+                  onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=ADCI_Portal_Fallback'">
+          </div>
+          <div class="qr-text-group">
+              <h4>SCAN TO ACCESS MESHED</h4>
+              <p>Student Portal & Grades</p>
+          </div>
+      </div>
+  </div>
+
+  <div class="col-map" id="center-carousel">
+      <div class="center-slide active-view" id="view-map">
+          <div id="map-viz"></div>
+      </div>
+      <div class="center-slide" id="view-image">
+          <div id="img-bg" class="blur-bg"></div>
+          <img id="img-fg" src="" class="sharp-fg ken-burns">
+      </div>
+      <div class="center-slide" id="view-video">
+          <video class="video-content" id="promo-video" muted playsinline>
+              <source src="./Present Pictures/ADCI Receiption Caption.mp4" type="video/mp4">
+          </video>
+      </div>
+  </div>
+
+  <div class="col-hub">
+      <div class="hub-title">
+          <span>EXAM WEEK</span>
+          <span class="badge badge-live">LIVE</span>
+      </div>
+      <div id="schedule-container">
+          </div>
+      <div id="term-countdown" style="margin-top: auto; padding: 15px; background: var(--brand-dark); color: white; border-radius: 12px; text-align: center;">
+          <div style="font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Exams Complete In</div>
+          <div id="days-count" style="font-size: 32px; font-weight: 800; color: var(--brand-accent);">-- Days</div>
+      </div>
+  </div>
+</div>
+
+<script>
+/* --- CONFIGURATION --- */
+const CONFIG = {
+    weatherKey: "a5bbc068379441b89cf24203251803", 
+    weatherCity: "Perth",
+    mapDuration: 30000, 
+    photoDuration: 8000,
+    nextTermStart: "2026-06-19", // Exam week end date
+    photos: ["Building.jpg", "Campus Logo.jpg", "Classroom 1.jpg", "Classroom 2.jpg", "Enterance.jpg", "Kitchen.jpg", "Meeting Room.jpg"],
+    breakTips: [
+        // { title: "EXAM SUBMISSION", desc: "All written assessments must be submitted via Canvas before your scheduled exam time.", icon: "📋", color: "#d32f2f" },
+        { title: "NO PHONES ALLOWED", desc: "Mobile devices must be off and stored in your bag during all examinations.", icon: "📵", color: "#002b55" },
+        { title: "ARRIVE EARLY", desc: "Be seated at least 10 minutes before your exam starts. Late entry may be refused.", icon: "⏰", color: "#ed6c02" },
+        { title: "STUDENT ID REQUIRED", desc: "You must present your student ID card to sit any examination. No exceptions.", icon: "🪪", color: "#0056b3" },
+        { title: "OPEN BOOK POLICY", desc: "Check your unit outline — some units permit notes. Confirm with your trainer if unsure.", icon: "📖", color: "#2e7d32" },
+        { title: "ACADEMIC INTEGRITY", desc: "Any attempt to cheat or plagiarise will result in an automatic fail and disciplinary action.", icon: "⚖️", color: "#6200ea" },
+        { title: "SUPPORT AVAILABLE", desc: "IT Support & Student Services are open 9AM–5PM. Reach out if you need any assistance.", icon: "🙋", color: "#ed6c02" }
+    ],
+    quotes: [
+        "“The secret of getting ahead is getting started.” — Mark Twain",
+        "“Believe you can and you’re halfway there.” — Theodore Roosevelt",
+        "“It always seems impossible until it’s done.” — Nelson Mandela",
+        "“Preparation is the key to success.” — Alexander Graham Bell",
+        "“You’ve studied hard. Trust yourself. You’ve got this.”"
+    ]
+};
+
+/* --- CAROUSEL ENGINE --- */
+let playlistIndex = 0; 
+let rotationTimer;
+const views = { map: document.getElementById('view-map'), image: document.getElementById('view-image'), video: document.getElementById('view-video') };
+const imgFg = document.getElementById('img-fg');
+const imgBg = document.getElementById('img-bg');
+const videoElement = document.getElementById('promo-video');
+
+function playNextSlide() {
+    Object.values(views).forEach(el => el.classList.remove('active-view'));
+    clearTimeout(rotationTimer);
+    if (playlistIndex === 0) {
+        views.map.classList.add('active-view');
+        setTimeout(drawMap, 100); 
+        rotationTimer = setTimeout(nextIndex, CONFIG.mapDuration);
+    } else if (playlistIndex === 1) {
+        views.video.classList.add('active-view');
+        videoElement.currentTime = 0;
+        videoElement.play().then(() => { videoElement.onended = () => nextIndex(); }).catch(() => nextIndex());
+    } else {
+        let photoIdx = playlistIndex - 2;
+        if (photoIdx < CONFIG.photos.length) {
+            views.image.classList.add('active-view');
+            const src = "./Present Pictures/" + CONFIG.photos[photoIdx];
+            imgFg.src = src;
+            imgBg.style.backgroundImage = `url('${src}')`;
+            imgFg.classList.remove('ken-burns');
+            void imgFg.offsetWidth;
+            imgFg.classList.add('ken-burns');
+            rotationTimer = setTimeout(nextIndex, CONFIG.photoDuration);
+        } else {
+            playlistIndex = -1; nextIndex();
+        }
+    }
+}
+function nextIndex() { playlistIndex++; playNextSlide(); }
+playNextSlide();
+
+/* --- CLOCK & WEATHER --- */
+function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    document.getElementById('date').innerText = now.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' });
+}
+setInterval(updateClock, 1000); updateClock();
+
+function fetchWeather() {
+    fetch(`https://api.weatherapi.com/v1/current.json?key=${CONFIG.weatherKey}&q=${CONFIG.weatherCity}`)
+    .then(r => r.json()).then(d => {
+        const card = document.getElementById('weather-card-bg');
+        const txt = d.current.condition.text.toLowerCase();
+        card.className = 'info-card weather-card';
+        if (txt.includes("rain") || txt.includes("shower")) card.classList.add("weather-rain");
+        else if (txt.includes("cloud") || txt.includes("overcast")) card.classList.add("weather-cloudy");
+        else card.classList.add("weather-sunny"); 
+        document.getElementById('weather-content').innerHTML = `
+            <img src="https:${d.current.condition.icon}" class="weather-icon">
+            <div class="weather-info"><div class="temp-big">${Math.round(d.current.temp_c)}°C</div><div class="weather-text">${d.current.condition.text}</div></div>`;
+    }).catch(() => {});
+}
+fetchWeather(); setInterval(fetchWeather, 600000);
+
+/* --- HUB: TUITION FREE DASHBOARD --- */
+function renderBreakHub() {
+    const container = document.getElementById('schedule-container');
+    const nextTerm = new Date(CONFIG.nextTermStart);
+    const diff = Math.ceil((nextTerm - new Date()) / (1000 * 60 * 60 * 24));
+    document.getElementById('days-count').innerText = diff > 0 ? `${diff} Days` : "Exams Complete!";
+
+    let html = `
+        <div class="tuition-free-card">
+            <div style="font-size:12px; color:var(--brand-blue); font-weight:800; letter-spacing:1px;">CURRENTLY IN</div>
+            <div style="font-size:22px; font-weight:800; font-family:'Oswald';">EXAM WEEK</div>
+            <div style="font-size:14px; margin-top:5px; color:var(--text-muted);">June 8th — June 14th</div>
+        </div>
+    `;
+
+    CONFIG.breakTips.forEach(item => {
+        html += `
+            <div class="event-row" style="border-left-color: ${item.color};">
+                <div class="event-time">${item.icon}</div>
+                <div class="event-details">
+                    <h4>${item.title}</h4>
+                    <p>${item.desc}</p>
+                </div>
+            </div>`;
+    });
+
+    const quote = CONFIG.quotes[Math.floor(Math.random() * CONFIG.quotes.length)];
+    html += `<div style="padding:15px; background:#f8f9fa; border-radius:12px; border:1px dashed #ccc; text-align:center; font-style:italic; font-size:13px; color:#666;">${quote}</div>`;
+    container.innerHTML = html;
+}
+renderBreakHub();
+setInterval(renderBreakHub, 3600000); // Refresh content hourly
+
+function autoScrollHub() {
+    const el = document.getElementById('schedule-container');
+    if(el.scrollHeight > el.clientHeight) {
+        if(el.scrollTop + el.clientHeight >= el.scrollHeight - 5) el.scrollTo({ top: 0, behavior: 'smooth' });
+        else el.scrollBy({ top: 120, behavior: 'smooth' });
+    }
+}
+setInterval(autoScrollHub, 10000);
+
+/* --- MAP ENGINE --- */
+var mapEl = document.getElementById("map-viz"), proj, path, attacks = [], ripples = [], dm;
+function drawMap() {
+    if(mapEl.innerHTML !== "" && !document.getElementById('view-map').classList.contains('active-view')) return;
+    mapEl.innerHTML = ""; attacks = []; ripples = [];
+    dm = new Datamap({
+        element: mapEl, projection: 'orthographic',
+        setProjection: function(el) {
+            var radius = Math.min(el.offsetHeight, el.offsetWidth) / 2.2;
+            proj = d3.geo.orthographic().scale(radius).translate([el.offsetWidth/2, el.offsetHeight/2]).clipAngle(90);
+            path = d3.geo.path().projection(proj);
+            return { projection: proj, path: path };
+        },
+        fills: { defaultFill: '#d0d6db' },
+        geographyConfig: { borderColor: '#ffffff', highlightFillColor: '#b8c2cc' }
+    });
+    var svg = d3.select("svg");
+    window.mapLayer = svg.append("g");
+    window.rippleLayer = svg.append("g");
+    window.labelLayer = svg.append("g");
+    window.textElements = window.labelLayer.selectAll("text").data(cityLabels).enter().append("text").attr("class", "city-label").text(d=>d.n);
+}
+
+const cityLabels = [{n:"PERTH", lat:-31.95, lng:115.86}, {n:"SYDNEY", lat:-33.86, lng:151.2}, {n:"TOKYO", lat:35.68, lng:139.69}, {n:"LONDON", lat:51.5, lng:-0.12}, {n:"NEW YORK", lat:40.71, lng:-74.0}];
+const t0 = Date.now();
+d3.timer(function() {
+    var t = Date.now() - t0;
+    if(proj && document.getElementById('view-map').classList.contains('active-view')) {
+        proj.rotate([t * 0.01, -15]); 
+        d3.selectAll("path.datamaps-subunit").attr("d", path);
+        if(window.textElements) {
+            window.textElements.each(function(d) {
+                var p = proj([d.lng, d.lat]);
+                var center = proj.invert([mapEl.offsetWidth/2, mapEl.offsetHeight/2]);
+                d3.select(this).style("display", d3.geo.distance(center, [d.lng, d.lat]) < 1.5 ? "block" : "none").attr("x", p[0]).attr("y", p[1] - 8);
+            });
+        }
+        var lines = window.mapLayer.selectAll("path.attack-line").data(attacks);
+        lines.enter().append("path").attr("class", "attack-line");
+        lines.attr("d", path).style("stroke", d => d.color).style("stroke-width", 2).style("stroke-dasharray", "5,5").style("stroke-dashoffset", d => -(t * 0.1) % 100);
+        lines.exit().remove();
+    }
+});
+function launchAttack() {
+    if(!document.getElementById('view-map').classList.contains('active-view')) return;
+    let s = cityLabels[Math.floor(Math.random()*cityLabels.length)], d = cityLabels[Math.floor(Math.random()*cityLabels.length)];
+    if(s!==d) {
+        let id = Math.random();
+        attacks.push({ type: "Feature", geometry: {type:"LineString", coordinates:[[s.lng,s.lat],[d.lng,d.lat]]}, color: "#00d2ff", id: id });
+        setTimeout(() => attacks = attacks.filter(a => a.id !== id), 2500);
+    }
+}
+setInterval(launchAttack, 1200);
+window.addEventListener('resize', () => drawMap());
+</script>
+</body>
+</html>
