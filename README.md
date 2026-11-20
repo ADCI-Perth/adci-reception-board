@@ -5,12 +5,22 @@ The board is shown at: **https://adci-perth.github.io/adci-reception-board/**
 It switches itself between Standard, Exam, Tuition-free, Semester break and Christmas
 depending on the date in the Calendar spreadsheet. You do not need to touch the board itself.
 
-## Updating the Calendar or the Timetable
+What the board shows:
+
+- **Key dates** from the Calendar spreadsheet (census date, public holidays, results and so on).
+- **Notice board** and a **ticker** along the bottom, from the Notices sheet of `Board.xlsx`.
+- **Rooms right now**, from the Timetable plus the Rooms sheet of `Board.xlsx`.
+- **Course spotlight** slides, from the Courses sheet of `Board.xlsx`.
+- **Photos** (with optional captions from the Media sheet) and videos.
+- A **QR code** in teaching, orientation, summer, assessment, tuition-free, study and exam
+  weeks. It is hidden in semester break and Christmas.
+
+## Updating the Calendar, Timetable or Board spreadsheet
 
 1. Go to github.com, sign in, and open the **adci-reception-board** repository.
 2. Open the **data** folder.
 3. Click **Add file**, then **Upload files**.
-4. Drag in your updated file. It must have exactly the same name: `Calendar.xlsx` or `Timetable.xlsx`.
+4. Drag in your updated file. It must have exactly the same name: `Calendar.xlsx`, `Timetable.xlsx` or `Board.xlsx`.
 5. Click **Commit changes**.
 
 Wait about 5 to 10 minutes. The reception screen reloads by itself when the update is ready.
@@ -19,18 +29,55 @@ Wait about 5 to 10 minutes. The reception screen reloads by itself when the upda
 
 Open the board address and add `check.html` on the end:
 **https://adci-perth.github.io/adci-reception-board/check.html**
-It lists any problems found in the spreadsheets (for example a misspelt date).
+It lists any problems found in the spreadsheets (for example a misspelt date), the notices that
+will show over the next three weeks, and every photo and video with its size. A file bigger than
+25 MB is flagged (see Photos and videos below).
 
 ## Previewing a particular day
 
 Add `?date=YYYY-MM-DD` to the board address, for example
 `https://adci-perth.github.io/adci-reception-board/?date=2026-11-24`
 
+## Notices, courses and rooms
+
+These live in `data/Board.xlsx`, which has four sheets. Every sheet is optional.
+
+- **Notices**: one row per notice. Title is required; Message, Start and End are optional.
+  Leave Start and End blank and the notice always shows. With no active notices the board shows
+  a default welcome notice.
+- **Courses**: one row per course (Course, Tagline, Duration, Intakes, Location, Photo). Each
+  becomes a course spotlight slide. Photo is a file name from `media/photos`.
+- **Rooms**: one row per room, always listed in Rooms right now (rooms in the Timetable are
+  included automatically).
+- **Media**: File and Caption, to put a caption on a photo in `media/photos`.
+
+Upload it the same way as the other spreadsheets (steps above), then open `check.html`.
+
+## Photos and videos
+
+Photos and videos are plain files in the repository. No code changes are needed.
+
+- `media/photos` - photos shown on the board (jpg, jpeg, png, webp, gif)
+- `media/videos` - videos (mp4, webm)
+- `media/christmas` - photos shown only during Christmas
+
+To add one: on github.com open the folder, click **Add file**, then **Upload files**, drag the
+file in and **Commit changes**. To remove one: open the file, click the bin (delete) icon and
+commit. The list of files (`media/manifest.json`) is built automatically when the site is
+published, so just wait the usual 5 to 10 minutes.
+
+**github.com will not accept an upload bigger than 25 MB per file.** Shrink large videos before
+uploading. `check.html` flags any existing file over 25 MB, because it cannot be replaced through
+the github.com upload page.
+
+The logo and QR code image are in `assets/img/`.
+
 ## Blank spreadsheets
 
 Blank templates are in the **templates** folder of the repository
-(`Calendar_TEMPLATE.xlsx` and `Timetable_TEMPLATE.xlsx`). Copy one, fill it in, and save it as
-`Calendar.xlsx` or `Timetable.xlsx` before uploading.
+(`Calendar_TEMPLATE.xlsx`, `Timetable_TEMPLATE.xlsx` and `Board_TEMPLATE.xlsx`). Copy one, fill it
+in, and save it as `Calendar.xlsx`, `Timetable.xlsx` or `Board.xlsx` before uploading. Each template
+has a **How to use** sheet.
 
 ## If the screen looks wrong
 
@@ -48,3 +95,9 @@ still show) and `check.html` lists them.
 - Turn off screen sleep and screen savers so the display stays on.
 - Make sure the PC's clock and time zone are set to **Perth**. The board uses the PC's date to
   decide what to show.
+
+## Previewing on your own computer (optional)
+
+Run `node tools/build-media-manifest.mjs .` once from the project folder to create
+`media/manifest.json`, then serve the folder with any local web server. Without the manifest the
+board has no photos or videos to show.
