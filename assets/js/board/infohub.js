@@ -5,7 +5,7 @@
    and the countdown is filled by main.js. Tips only for tuition/exam; quote always. */
 import { titlesFor } from '../core/banner.js';
 import { formatShort } from '../core/dates.js';
-import { escapeHtml } from './widgets/news.js';
+import { escapeHtml } from './util.js';
 
 export function tipsFor(mode, content) {
     if (mode === 'tuition') return content.tuitionTips;

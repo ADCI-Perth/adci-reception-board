@@ -1,6 +1,7 @@
 /* --- LIVE NEWS FEEDS + SHARED FETCH HELPERS ---
    Ported from Semester_Break_Hubv2.html 598-611 (fetchJsonWithTimeout) and 718-880.
    Only change: the immediate fetch/setInterval calls moved into start(). */
+import { escapeHtml } from '../util.js';
 
 export function fetchJsonWithTimeout(url, timeoutMs) {
     const controller = new AbortController();
@@ -62,11 +63,6 @@ function timeAgo(dateStr) {
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return hrs + "h ago";
     return Math.floor(hrs / 24) + "d ago";
-}
-
-export function escapeHtml(str) {
-    return String(str || "")
-        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 export function renderNewsList(containerId, items, index, count, emptyText, emptySource) {

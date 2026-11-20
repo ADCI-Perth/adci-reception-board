@@ -2,7 +2,7 @@
    Changes: takes the container and today's classes (from Timetable.xlsx) instead of
    reading CONFIG.schedule; class text is HTML-escaped because it now comes from a spreadsheet. */
 import { displayName } from '../core/timetable.js';
-import { escapeHtml } from './widgets/news.js';
+import { escapeHtml } from './util.js';
 
 export function renderSchedule(container, classes) {
     try {
