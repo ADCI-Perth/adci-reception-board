@@ -6,6 +6,7 @@ import { bannerFor, titlesFor } from './core/banner.js';
 import { CONFIG } from './board/config.js';
 import { loadData } from './board/data.js';
 import { safeReload } from './board/reload.js';
+import { watchVersion } from './board/version-watch.js';
 import { applyLayout, layoutFor, createSnowflakes } from './board/layout.js';
 import { renderInfoHub, renderAssessmentEmpty } from './board/infohub.js';
 import * as content from './board/content.js';
@@ -26,6 +27,9 @@ const $ = id => document.getElementById(id);
 setTimeout(function tryReload() {
     safeReload().then(ok => { if (!ok) setTimeout(tryReload, 60000); });
 }, CONFIG.reloadAfterMs);
+
+// Reload when a new version is published (version.txt changes after each deploy).
+watchVersion();
 
 // One failing widget (e.g. a CDN library that did not load) must not stop the others.
 function startWidgets() {
