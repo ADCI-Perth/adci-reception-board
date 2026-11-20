@@ -1,67 +1,175 @@
-/* --- CAROUSEL ENGINE --- (ported from Standard_reception_hub - v4.html 423-479)
-   Only change: wrapped in start(config); media URLs built with mediaUrl() (encodeURI). */
-import { mediaUrl } from '../config.js';
-import { drawMap } from './map.js';
+/* Playlist carousel: map -> course spotlights -> photos/videos, driven by media/manifest.json.
+   One photo slide, one video slide and one spotlight slide are created once and reused. */
+import { buildPlaylist } from '../../core/playlist.js';
+import { escapeHtml } from '../util.js';
+import { drawMap, start as startMap } from './map.js';
 
-let CONFIG;
-let playlistIndex = 0;
-let rotationTimer;
-let views, imgFg, imgBg, videoElement, videoSource;
+const MAX_BARS = 12;
+const VIDEO_STALL_MS = 5000;
 
-function playNextSlide() {
-    Object.values(views).forEach(el => el.classList.remove('active-view'));
-    clearTimeout(rotationTimer);
-
-    if (playlistIndex === 0) {
-        views.map.classList.add('active-view');
-        setTimeout(drawMap, 100);
-        rotationTimer = setTimeout(nextIndex, CONFIG.mapDuration);
-    }
-    else if (playlistIndex > 0 && playlistIndex <= CONFIG.videos.length) {
-        const videoIdx = playlistIndex - 1;
-        const src = mediaUrl(CONFIG.videos[videoIdx]);
-        views.video.classList.add('active-view');
-        if (videoSource.getAttribute('src') !== src) {
-            videoSource.setAttribute('src', src);
-            videoElement.load();
-        }
-        videoElement.currentTime = 0;
-        let playPromise = videoElement.play();
-        if (playPromise !== undefined) {
-            playPromise.then(() => {
-                videoElement.onended = () => { nextIndex(); };
-            }).catch(err => { nextIndex(); });
-        }
-    }
-    else {
-        let photoIdx = playlistIndex - CONFIG.videos.length - 1;
-        if (photoIdx < CONFIG.photos.length) {
-            views.image.classList.add('active-view');
-            const src = mediaUrl(CONFIG.photos[photoIdx]);
-            imgFg.src = src;
-            imgBg.style.backgroundImage = `url('${src}')`;
-            imgFg.classList.remove('ken-burns');
-            void imgFg.offsetWidth;
-            imgFg.classList.add('ken-burns');
-            rotationTimer = setTimeout(nextIndex, CONFIG.photoDuration);
-        } else {
-            playlistIndex = -1;
-            nextIndex();
-        }
-    }
+async function fetchManifest(url) {
+    try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (e) { return null; }
 }
-function nextIndex() { playlistIndex++; playNextSlide(); }
 
-export function start(config) {
-    CONFIG = config;
-    views = {
-        map: document.getElementById('view-map'),
-        image: document.getElementById('view-image'),
-        video: document.getElementById('view-video')
-    };
-    imgFg = document.getElementById('img-fg');
-    imgBg = document.getElementById('img-bg');
-    videoElement = document.getElementById('promo-video');
-    videoSource = document.getElementById('promo-video-source');
-    playNextSlide();
+function el(html) {
+    const t = document.createElement('template');
+    t.innerHTML = html.trim();
+    return t.content.firstChild;
+}
+
+export async function startCarousel(stageEl, opts = {}) {
+    const { manifestUrl = 'media/manifest.json', courses = [], captions = {}, mode,
+            mapDuration = 30000, photoDuration = 6000 } = opts;
+
+    const mapView = stageEl.querySelector('#view-map');
+    const photoView = el('<div class="center-slide" id="view-photo"><img class="photo" alt=""><div class="caption" hidden><small>OUR CAMPUS</small><h2></h2></div></div>');
+    const videoView = el('<div class="center-slide" id="view-video"><video muted playsinline style="width:100%;height:100%;object-fit:cover;background:#000"></video></div>');
+    const spotView = el('<div class="center-slide" id="view-spot"><div class="spot"><div class="txt"></div><div class="spot-photo"></div></div></div>');
+    const barsEl = el('<div class="bars"></div>');
+    barsEl.style.zIndex = '20';
+    stageEl.append(photoView, videoView, spotView, barsEl);
+    const views = [mapView, photoView, videoView, spotView];
+    const img = photoView.querySelector('img');
+    const capBox = photoView.querySelector('.caption');
+    const capTitle = capBox.querySelector('h2');
+    const video = videoView.querySelector('video');
+    const spotTxt = spotView.querySelector('.txt');
+    const spotPhoto = spotView.querySelector('.spot-photo');
+
+    try { startMap(); } catch (e) { console.error('Map start failed', e); }
+
+    let manifest = await fetchManifest(manifestUrl);
+    let slides = buildPlaylist({ manifest, courses, captions, mode });
+    let index = 0;
+    let cleanup = null;      // undoes the current slide's timers/listeners
+    let token = 0;           // guards against stale callbacks
+
+    function renderBars(current, durationMs) {
+        const n = slides.length;
+        const shown = Math.min(n, MAX_BARS);
+        let first = 0;
+        if (n > MAX_BARS) first = Math.min(Math.floor(current / MAX_BARS) * MAX_BARS, n - MAX_BARS);
+        barsEl.innerHTML = '';
+        let fill = null;
+        for (let i = first; i < first + shown; i++) {
+            const seg = document.createElement('i');
+            if (i < current) seg.style.background = '#fff';
+            else if (i === current) {
+                fill = document.createElement('span');
+                fill.style.cssText = 'display:block;height:100%;width:0;background:#fff;border-radius:4px';
+                seg.appendChild(fill);
+            }
+            barsEl.appendChild(seg);
+        }
+        if (fill && durationMs) {
+            void fill.offsetWidth;
+            fill.style.transition = `width ${durationMs}ms linear`;
+            fill.style.width = '100%';
+        } else if (fill) fill.style.width = '100%';
+    }
+
+    function show(view) {
+        for (const v of views) v.classList.toggle('active-view', v === view);
+    }
+
+    function next() {
+        if (cleanup) { cleanup(); cleanup = null; }
+        index++;
+        if (index >= slides.length) {
+            index = 0;
+            if (!manifest) {
+                // A failed manifest fetch is retried once per wrap, then play on with whatever we have.
+                fetchManifest(manifestUrl).then(m => {
+                    if (m) { manifest = m; slides = buildPlaylist({ manifest, courses, captions, mode }); }
+                    play();
+                }, play);
+                return;
+            }
+        }
+        play();
+    }
+
+    function play() {
+        if (cleanup) { cleanup(); cleanup = null; }
+        const my = ++token;
+        const slide = slides[index] || slides[0];
+        const go = () => { if (my === token) next(); };
+        const timers = [];
+        const after = (fn, ms) => { timers.push(setTimeout(fn, ms)); };
+        cleanup = () => { timers.forEach(clearTimeout); };
+
+        try {
+            if (slide.kind === 'map') {
+                show(mapView);
+                renderBars(index, mapDuration);
+                after(() => { try { drawMap(); } catch (e) { console.error('drawMap failed', e); } }, 100);
+                after(go, mapDuration);
+            } else if (slide.kind === 'photo') {
+                img.onerror = go;
+                img.src = slide.url;
+                if (slide.caption) { capTitle.textContent = slide.caption; capBox.hidden = false; }
+                else { capTitle.textContent = ''; capBox.hidden = true; }
+                show(photoView);
+                renderBars(index, photoDuration);
+                after(go, photoDuration);
+                cleanup = () => { timers.forEach(clearTimeout); img.onerror = null; };
+            } else if (slide.kind === 'course') {
+                const c = slide.course;
+                const facts = [[c.duration, 'Duration'], [c.intakes, 'Intakes'], [c.location, 'Location']]
+                    .filter(([v]) => v && String(v).trim())
+                    .map(([v, l]) => `<div><b>${escapeHtml(v)}</b>${l}</div>`).join('');
+                spotTxt.innerHTML = `<small>COURSE SPOTLIGHT</small><h2>${escapeHtml(c.course)}</h2>`
+                    + (c.tagline ? `<p>${escapeHtml(c.tagline)}</p>` : '')
+                    + (facts ? `<div class="facts">${facts}</div>` : '');
+                spotPhoto.innerHTML = '';
+                if (slide.photoUrl) {
+                    const im = document.createElement('img');
+                    im.alt = '';
+                    im.src = slide.photoUrl;
+                    spotPhoto.appendChild(im);
+                    spotPhoto.style.background = '';
+                } else {
+                    spotPhoto.style.background = 'linear-gradient(135deg,var(--teal),var(--navy))';
+                }
+                show(spotView);
+                renderBars(index, photoDuration * 2);
+                after(go, photoDuration * 2);
+            } else if (slide.kind === 'video') {
+                let started = false;
+                const onPlaying = () => {
+                    if (started) return;
+                    started = true;
+                    clearTimeout(stall);
+                    if (isFinite(video.duration) && video.duration > 0) renderBars(index, video.duration * 1000);
+                };
+                const stall = setTimeout(go, VIDEO_STALL_MS);
+                timers.push(stall);
+                video.addEventListener('ended', go);
+                video.addEventListener('error', go);
+                video.addEventListener('playing', onPlaying);
+                cleanup = () => {
+                    timers.forEach(clearTimeout);
+                    video.removeEventListener('ended', go);
+                    video.removeEventListener('error', go);
+                    video.removeEventListener('playing', onPlaying);
+                    video.pause();
+                };
+                video.muted = true;
+                video.src = slide.url;
+                show(videoView);
+                renderBars(index, 0);
+                const p = video.play();
+                if (p && p.catch) p.catch(go);
+            }
+        } catch (e) {
+            console.error('Carousel slide failed', e);
+            after(go, 1000);
+        }
+    }
+
+    play();
 }

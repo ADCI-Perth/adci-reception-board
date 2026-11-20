@@ -10,7 +10,3 @@ export const CONFIG = {
     scheduleRefreshMs: 30000,   // v4 used 3 s; the board re-renders every 30 s
     reloadAfterMs: 46800000     // existing 13-hour full reload
 };
-
-export function mediaUrl(name) {
-    return encodeURI(CONFIG.mediaFolder + name);
-}

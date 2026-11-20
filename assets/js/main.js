@@ -10,6 +10,7 @@ import { watchVersion } from './board/version-watch.js';
 import { createSnowflakes } from './board/layout.js';
 import * as clock from './board/widgets/clock.js';
 import * as weather from './board/widgets/weather.js';
+import { startCarousel } from './board/widgets/carousel.js';
 
 const $ = id => document.getElementById(id);
 
@@ -77,6 +78,12 @@ async function boot() {
         document.body.classList.add('xmas');
         createSnowflakes();
     }
+    try {
+        startCarousel($('stage'), {
+            courses: data.board?.courses || [], captions: data.board?.captions || {}, mode: state.mode,
+            mapDuration: CONFIG.mapDuration, photoDuration: CONFIG.photoDuration
+        }).catch(e => console.error('Carousel failed', e));
+    } catch (e) { console.error('Carousel failed to start', e); }
     watchModeChange(data.cal, state, iso);
     console.info(`Board: ${iso} mode=${state.mode} data=${data.source}`, data.loadedAt || '');
 }
