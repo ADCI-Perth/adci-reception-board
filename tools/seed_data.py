@@ -109,7 +109,7 @@ def timetable_rows():
     s1 = "Summer 1 2026-27"
     summer(s1, "CAP302", "Industry Capstone", "Dr Anna Griffin", ["Mon", "Fri"], "09:00", "13:00", date(2026, 11, 23), date(2026, 12, 18))
     summer(s1, "ORG303", "Digital Innovation", "Dr Maen Hawari", ["Tue", "Wed", "Thu"], "09:00", "12:00", date(2026, 11, 24), date(2026, 12, 10))
-    summer(s1, "CYB306", "Security and Privacy Implications", "Chloe Wu", ["Tue", "Wed", "Thu"], "13:00", "16:00", date(2026, 11, 24), date(2026, 12, 10))
+    summer(s1, "CYB306", "Security & Privacy Implications of the IOT", "Chloe Wu", ["Tue", "Wed", "Thu"], "13:00", "16:00", date(2026, 11, 24), date(2026, 12, 10))
     s2 = "Summer 2 2026-27"
     summer(s2, "SEC101", "Human Factors Security and Privacy", "Dr Alfred Tseng", ["Tue", "Wed", "Thu"], "09:00", "12:00", date(2027, 1, 12), date(2027, 1, 28))
     summer(s2, "CYB201", "Network Security", "Mohammad Qatatsha", ["Tue", "Wed", "Thu"], "13:00", "16:00", date(2027, 1, 12), date(2027, 1, 28))
