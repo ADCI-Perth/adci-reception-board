@@ -38,7 +38,7 @@ test('modes on key dates', () => {
   assert.equal(m('2026-11-23').countdown, null);
   assert.equal(m('2026-12-14').mode, 'assessment');
   assert.equal(m('2026-12-21').mode, 'christmas');
-  assert.deepEqual(m('2026-12-21').countdown, { label: 'Campus Reopens In', target: '2027-01-11' });
+  assert.deepEqual(m('2026-12-21').countdown, { label: 'Campus Reopens In', target: '2027-01-04' });
   assert.equal(m('2027-01-05').mode, 'break');
   assert.deepEqual(m('2027-01-05').countdown, { label: 'Classes Resume In', target: '2027-01-11' });
   assert.deepEqual(m('2027-01-05').block, { start: '2027-01-02', end: '2027-01-10' });
@@ -82,4 +82,25 @@ test('explicit Semester Break row is a break period with countdown', () => {
 test('empty calendar resolves to break', () => {
   const s = resolveDay(parseCalendarRows([]), '2026-11-20');
   assert.equal(s.mode, 'break'); assert.equal(s.countdown, null);
+});
+
+test('Christmas countdown targets first weekday after the closure', () => {
+  const c = parseCalendarRows([
+    { Type: 'Christmas', Name: 'Xmas 2027', Start: '20/12/2027', End: '31/12/2027', __row: 2 },
+    { Type: 'Teaching', Name: 'T1', Start: '10/01/2028', End: '14/01/2028', __row: 3 },
+  ]);
+  assert.deepEqual(resolveDay(c, '2027-12-22').countdown, { label: 'Campus Reopens In', target: '2028-01-03' });
+});
+
+test('Type lookup rejects prototype keys and collapses inner whitespace', () => {
+  const c = parseCalendarRows([
+    { Type: 'constructor', Name: 'A', Start: '01/03/2027', End: '05/03/2027', __row: 2 },
+    { Type: 'toString', Name: 'B', Start: '01/03/2027', End: '05/03/2027', __row: 3 },
+    { Type: '__proto__', Name: 'C', Start: '01/03/2027', End: '05/03/2027', __row: 4 },
+    { Type: ' Tuition  Free ', Name: 'D', Start: '01/03/2027', End: '05/03/2027', __row: 5 },
+  ]);
+  assert.deepEqual(c.errors.map(e => e.row), [2, 3, 4]);
+  assert.match(c.errors[0].message, /Unknown or missing Type "constructor"/);
+  assert.equal(c.periods.length, 1);
+  assert.equal(c.periods[0].type, 'tuition');
 });

@@ -1,6 +1,6 @@
 import { toISODate, addDays, daysBetween, weekday } from './dates.js';
 
-const TYPE_MAP = {
+const TYPE_MAP = Object.freeze({
   orientation: 'orientation',
   teaching: 'teaching',
   'tuition free': 'tuition',
@@ -11,7 +11,13 @@ const TYPE_MAP = {
   summer: 'summer',
   christmas: 'christmas',
   event: 'event',
-};
+});
+
+// Own keys only, so "constructor"/"toString" are rejected; inner whitespace collapsed.
+function lookupType(value) {
+  const key = text(value).trim().replace(/\s+/g, ' ').toLowerCase();
+  return Object.hasOwn(TYPE_MAP, key) ? TYPE_MAP[key] : null;
+}
 
 // Highest priority first.
 const PRIORITY = ['christmas', 'exam', 'study', 'assessment', 'tuition', 'summer', 'orientation', 'teaching', 'break'];
@@ -50,7 +56,7 @@ export function parseCalendarRows(rows) {
     const row = r.__row;
     if (Object.entries(r).every(([k, v]) => k === '__row' || isBlank(v))) continue;
 
-    const type = TYPE_MAP[text(r.type).toLowerCase()];
+    const type = lookupType(r.type);
     if (!type) {
       errors.push({ row, message: `Unknown or missing Type "${text(r.type)}"` });
       continue;
@@ -135,10 +141,9 @@ export function resolveDay(cal, iso) {
   } else if (mode === 'tuition') {
     if (next) countdown = { label: 'Classes Resume In', target: next.start };
   } else if (mode === 'christmas') {
-    countdown = {
-      label: 'Campus Reopens In',
-      target: next ? next.start : firstWeekdayAfter(block.end),
-    };
+    // Campus (reception/office) reopens on the first weekday after the closure,
+    // even if classes resume later.
+    countdown = { label: 'Campus Reopens In', target: firstWeekdayAfter(block.end) };
   } else if (mode === 'study' || mode === 'assessment' || mode === 'break') {
     if (next) countdown = { label: NEXT_LABEL[next.type], target: next.start };
   }
