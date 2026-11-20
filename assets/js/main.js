@@ -63,7 +63,12 @@ function renderCountdown(state, iso) {
 function startSchedule(data, state, iso) {
     const container = $('schedule-container');
     const term = state.period?.term ?? null;
-    const render = () => renderSchedule(container, classesForDay(data.tt.classes, term, iso));
+    const render = () => {
+        // Past midnight: reload so the mode, banner and classes are recomputed for the new day
+        // (v4 picked the weekday on every render). With ?date= the day never changes.
+        if (todayISO(location.search) !== iso) { location.reload(); return; }
+        renderSchedule(container, classesForDay(data.tt.classes, term, iso));
+    };
     render();
     setInterval(render, CONFIG.scheduleRefreshMs);
     setInterval(() => autoScrollTimetable(container), 10000);
