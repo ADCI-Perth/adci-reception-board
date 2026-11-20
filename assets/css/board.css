@@ -185,3 +185,36 @@ body.xmas #ticker-bar .tag{color:#fff}
 .empty-note{font:500 16px Inter;color:var(--muted)}
 .dark .empty-note{color:rgba(255,255,255,.7)}
 #panel-notice[hidden],#panel-countdown[hidden],#panel-qr[hidden],#rooms-strip:empty{display:none}
+
+/* ---------- Task 6: panels and hub ---------- */
+#panel-notice{flex:none}
+.date-item .dtxt{min-width:0}
+#notice-message[hidden],#notice-pager[hidden],#rooms-strip[hidden]{display:none}
+/* hub card fills the right column above countdown / QR */
+.hub-main{flex:1;min-height:0;display:flex;flex-direction:column;gap:16px}
+.hub-main.kind-classes .hub-head{flex:none}
+.hub-main .classes{flex:1;min-height:0;overflow:hidden}
+.cls{flex:none}
+.cls .b{min-width:0}
+.cls h4{overflow-wrap:anywhere}
+.hub-empty{margin:auto;text-align:center;font:600 20px Inter;padding:20px}
+.hero{flex:none}
+.exam .hero p,.xmas .hero p{color:var(--muted)}
+.rule span{min-width:0}
+/* tuition / study tips */
+.tiplist{display:flex;flex-direction:column;gap:10px;min-height:0}
+.tiplist .label{margin-bottom:2px}
+.tip{display:flex;gap:14px;align-items:center;border-radius:14px;background:#f6f8fa;padding:12px 14px}
+.tip i{font-style:normal;font-size:30px;flex:none;width:38px;text-align:center}
+.tip h4{margin:0;font:700 17px Inter;color:var(--navy)}
+.tip p{margin:3px 0 0;font:500 14px/1.35 Inter;color:var(--muted)}
+.quote{margin-top:auto;padding:16px 18px;background:#f6f8fa;border-radius:14px;border:1px dashed #c5ced8;text-align:center;font:italic 500 16px/1.45 Inter;color:var(--muted)}
+/* rooms strip: NEXT state */
+.room .rtxt{min-width:0}
+.soon .st{background:var(--warn);box-shadow:0 0 0 5px #fdebd6}.soon .tag{background:#fff3e0;color:var(--warn)}
+.room .tag{white-space:nowrap;flex:none}
+/* 4+ rooms: tag moves under the room text so names are not squeezed */
+.rooms.many{gap:12px}
+.rooms.many .room{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;row-gap:6px;padding:14px 16px;align-items:center}
+.rooms.many .room .tag{grid-column:2;margin-left:0;justify-self:start;font-size:12px;padding:4px 8px}
+.rooms.many .room h4{font-size:17px}

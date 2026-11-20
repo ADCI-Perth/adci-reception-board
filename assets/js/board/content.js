@@ -29,3 +29,17 @@ export const quotes = [
     "“Preparation is the key to success.” — Alexander Graham Bell",
     "“You’ve studied hard. Trust yourself. You’ve got this.”"
 ];
+
+// Semester-break visitor lines (2026 redesign; the mockup's "free tea and coffee" line is not used).
+export const welcomeLines = [
+    { icon: "👋", lead: "Visiting us?", text: "Please take a seat — a team member will be with you shortly." },
+    { icon: "📝", lead: "Enrolling?", text: "Ask at reception for course information." }
+];
+
+// Christmas thank-you lines; year = year the closure block starts.
+export function christmasLines(year) {
+    return [
+        `Thank you to every student, lecturer and visitor who made ${year} a great year.`,
+        `Enjoy a safe and happy holiday season — see you in ${year + 1}!`
+    ];
+}
