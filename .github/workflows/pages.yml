@@ -28,7 +28,8 @@ jobs:
       - name: Collect site files (leaves out tests, tools, docs, node_modules, archive, etc.)
         run: |
           mkdir _site
-          cp index.html check.html version.txt README.md _site/
+          cp index.html check.html version.txt _site/
+          if [ -f README.md ]; then cp README.md _site/; fi
           cp -r assets data templates "Present Pictures" _site/
       - uses: actions/upload-pages-artifact@v3
         with:
