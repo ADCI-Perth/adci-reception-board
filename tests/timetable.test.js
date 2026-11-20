@@ -51,12 +51,12 @@ test('time formats', () => {
   assert.equal(tt.classes[0].end, '12:00');
 });
 
-test('From/To default to whole term', () => {
+test("From/To default to the term's teaching weeks (not assessment week)", () => {
   const tt = parseTimetableRows([
     { Term: S1, Unit: 'X1', Day: 'Mon', Start: '09:00', End: '10:00', __row: 2 },
   ], cal);
   assert.equal(tt.classes[0].from, '2026-11-23');
-  assert.equal(tt.classes[0].to, '2026-12-18');
+  assert.equal(tt.classes[0].to, '2026-12-11');
 });
 
 test('term not in calendar', () => {

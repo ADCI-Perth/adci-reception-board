@@ -6,8 +6,15 @@ const DAYS = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 
 const isBlank = v => v === undefined || v === null || v === '';
 const text = v => (isBlank(v) ? '' : String(v).trim());
 
+// Default class dates: the term's teaching/summer weeks only, so Orientation (and any
+// other non-teaching period tagged with the term) shows no classes. Falls back to all
+// the term's periods if it has no teaching/summer rows.
+const CLASS_TYPES = ['teaching', 'summer'];
+
 function termRange(cal, term) {
-  const ps = ((cal && cal.periods) || []).filter(p => p.term === term);
+  const all = ((cal && cal.periods) || []).filter(p => p.term === term);
+  const teach = all.filter(p => CLASS_TYPES.includes(p.type));
+  const ps = teach.length ? teach : all;
   if (!ps.length) return null;
   return {
     from: ps.reduce((m, p) => (p.start < m ? p.start : m), ps[0].start),

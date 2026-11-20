@@ -35,3 +35,10 @@ test('templates parse to zero rows', () => {
   assert.equal(read('templates/Calendar_TEMPLATE.xlsx', 'Calendar').length, 0);
   assert.equal(read('templates/Timetable_TEMPLATE.xlsx', 'Timetable').length, 0);
 });
+
+test('seed: Orientation Week shows no classes; Teaching Week 1 does', () => {
+  assert.equal(resolveDay(cal, '2026-07-21').mode, 'orientation');
+  assert.deepEqual(classesForDay(tt.classes, 'Jul 2026', '2026-07-21'), []);
+  assert.equal(resolveDay(cal, '2026-07-28').mode, 'teaching');
+  assert.ok(classesForDay(tt.classes, 'Jul 2026', '2026-07-28').length > 0);
+});
