@@ -1,5 +1,6 @@
 // Loads Calendar.xlsx and Timetable.xlsx. Each file falls back independently to the
-// last good copy in localStorage; with neither, the board runs on empty data (break mode).
+// last good copy in localStorage (if it cannot be downloaded/opened, or has rows but none
+// valid); with neither, the board runs on empty data (break mode).
 import { sheetRows } from '../core/workbook.js';
 import { parseCalendarRows } from '../core/calendar.js';
 import { parseTimetableRows } from '../core/timetable.js';
@@ -26,25 +27,63 @@ async function fetchRows(XLSX, url, sheetName) {
     return sheetRows(XLSX, await res.arrayBuffer(), sheetName);
 }
 
-// -> { rows, live }; rows is null when neither a live nor a cached copy exists.
-async function loadRows(XLSX, url, sheetName, key) {
+// -> { rows, live }; rows is null when the file could not be downloaded or opened.
+// The cache is NOT written here: loadData first checks the rows are usable.
+async function fetchLive(XLSX, url, sheetName) {
     try {
-        const rows = await fetchRows(XLSX, url, sheetName);
-        writeCache(key, rows);
-        return { rows, live: true };
+        return await fetchRows(XLSX, url, sheetName);
     } catch (e) {
         console.warn(`Could not load ${url}; using cached copy if available.`, e);
-        const rows = readCache(key);
-        return { rows: Array.isArray(rows) ? rows : null, live: false };
+        return null;
     }
 }
 
+function cachedRows(key) {
+    const rows = readCache(key);
+    return Array.isArray(rows) ? rows : null;
+}
+
+function safeParse(fn, fallback) {
+    try { return fn(); } catch (e) { console.error(e); return fallback(); }
+}
+
+// Picks live rows when usable, else the cached copy. A live file that has rows but
+// parses to nothing valid (only errors) is treated like a failed download, so one bad
+// upload never overwrites the last good copy. -> { rows, parsed, live }
+function choose(liveRows, key, parse, isEmpty) {
+    if (liveRows) {
+        const parsed = parse(liveRows);
+        const unusable = isEmpty(parsed) && parsed.errors.length > 0;
+        if (!unusable) {
+            writeCache(key, liveRows);
+            return { rows: liveRows, parsed, live: true };
+        }
+        const cached = cachedRows(key);
+        if (!cached) return { rows: liveRows, parsed, live: true };
+        console.warn(`${key}: the live file has no valid rows; keeping the cached copy.`);
+        return { rows: cached, parsed: parse(cached), live: false };
+    }
+    const cached = cachedRows(key);
+    return { rows: cached, parsed: parse(cached || []), live: false };
+}
+
 export async function loadData(XLSX) {
-    const [calFile, ttFile] = await Promise.all([
-        loadRows(XLSX, 'data/Calendar.xlsx', 'Calendar', KEYS.calendar),
-        loadRows(XLSX, 'data/Timetable.xlsx', 'Timetable', KEYS.timetable),
+    const [calLive, ttLive] = await Promise.all([
+        fetchLive(XLSX, 'data/Calendar.xlsx', 'Calendar'),
+        fetchLive(XLSX, 'data/Timetable.xlsx', 'Timetable'),
     ]);
 
+    const emptyCal = () => parseCalendarRows([]);
+    const parseCal = rows => safeParse(() => parseCalendarRows(rows), emptyCal);
+    const calFile = choose(calLive, KEYS.calendar, parseCal, c => c.periods.length === 0);
+    const cal = calFile.parsed;
+
+    const parseTt = rows => safeParse(() => parseTimetableRows(rows, cal), () => ({ classes: [], errors: [] }));
+    const ttFile = choose(ttLive, KEYS.timetable, parseTt, t => t.classes.length === 0);
+    const tt = ttFile.parsed;
+
+    // source: 'live' only when both files came from the server and were used;
+    // 'cache' when either fell back to the saved copy (download failed or file unusable).
     let source;
     let loadedAt;
     if (calFile.live && ttFile.live) {
@@ -58,10 +97,5 @@ export async function loadData(XLSX) {
         source = 'none';
         loadedAt = null;
     }
-
-    let cal;
-    let tt;
-    try { cal = parseCalendarRows(calFile.rows || []); } catch (e) { console.error(e); cal = parseCalendarRows([]); }
-    try { tt = parseTimetableRows(ttFile.rows || [], cal); } catch (e) { console.error(e); tt = { classes: [], errors: [] }; }
     return { cal, tt, source, loadedAt };
 }
