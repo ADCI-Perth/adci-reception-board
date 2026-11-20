@@ -5,6 +5,7 @@ import { classesForDay } from './core/timetable.js';
 import { bannerFor, titlesFor } from './core/banner.js';
 import { CONFIG } from './board/config.js';
 import { loadData } from './board/data.js';
+import { safeReload } from './board/reload.js';
 import { renderSchedule, autoScrollTimetable } from './board/schedule.js';
 import * as clock from './board/widgets/clock.js';
 import * as weather from './board/widgets/weather.js';
@@ -17,9 +18,10 @@ import * as carousel from './board/widgets/carousel.js';
 const $ = id => document.getElementById(id);
 
 /* --- AUTO REFRESH SYSTEM --- */
-// Refresh the entire page every 13 hours (46,800,000 ms)
-setTimeout(() => {
-    window.location.reload();
+// Refresh the entire page every 13 hours (46,800,000 ms); if the site is unreachable
+// at that moment, keep the current board and try again a minute later.
+setTimeout(function tryReload() {
+    safeReload().then(ok => { if (!ok) setTimeout(tryReload, 60000); });
 }, CONFIG.reloadAfterMs);
 
 // One failing widget (e.g. a CDN library that did not load) must not stop the others.
@@ -66,7 +68,8 @@ function startSchedule(data, state, iso) {
     const render = () => {
         // Past midnight: reload so the mode, banner and classes are recomputed for the new day
         // (v4 picked the weekday on every render). With ?date= the day never changes.
-        if (todayISO(location.search) !== iso) { location.reload(); return; }
+        // safeReload only reloads when the site answers; otherwise the next tick retries.
+        if (todayISO(location.search) !== iso) safeReload();
         renderSchedule(container, classesForDay(data.tt.classes, term, iso));
     };
     render();

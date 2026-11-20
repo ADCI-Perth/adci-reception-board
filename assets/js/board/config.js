@@ -9,7 +9,7 @@ export const CONFIG = {
     photos: [
         "Orientation-2026-1.png","Orientation-2026-2.png","Building.jpg", "Campus Logo.jpg", "Classroom 1.jpg", "Classroom 2.jpg",
         "Enterance.jpg", "Kitchen.jpg", "Meeting Room.jpg", "orientation.jpg","orientation2.jpg", "orientation3.jpg", "orientation4.jpg",
-        "Designer (1).png", "ds2.jpg",
+        "ds2.jpg",
     ],
 
     videos: [
