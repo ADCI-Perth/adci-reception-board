@@ -35,9 +35,17 @@ export async function startCarousel(stageEl, opts = {}) {
     const photoView = el('<div class="center-slide" id="view-photo"><img class="photo" alt=""><div class="caption" hidden><small>OUR CAMPUS</small><h2></h2></div></div>');
     const videoView = el('<div class="center-slide" id="view-video"><video muted playsinline style="width:100%;height:100%;object-fit:cover;background:#000"></video></div>');
     const spotView = el('<div class="center-slide" id="view-spot"><div class="spot"><div class="txt"></div><div class="spot-photo"></div></div></div>');
-    const barsEl = el('<div class="bars"></div>');
-    barsEl.style.zIndex = '20';
-    stageEl.append(photoView, videoView, spotView, barsEl);
+    // Progress: countdown ring + slide number (top-left), kind chip, dot track (bottom-left).
+    const ringEl = el('<div class="ring prog-glass"><svg viewBox="0 0 96 96"><defs><linearGradient id="ring-grad">'
+        + '<stop offset="0" style="stop-color:var(--accent2)"/><stop offset="1" style="stop-color:var(--accent)"/></linearGradient></defs>'
+        + '<circle cx="48" cy="48" r="42" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="6"/>'
+        + '<circle class="arc" cx="48" cy="48" r="42"/></svg><div class="n"><span>01</span><small>OF 1</small></div></div>');
+    const kindEl = el('<div class="kind prog-glass">MAP</div>');
+    const dotsEl = el('<div class="dots prog-glass"></div>');
+    stageEl.append(photoView, videoView, spotView, ringEl, kindEl, dotsEl);
+    const arc = ringEl.querySelector('.arc');
+    const numEl = ringEl.querySelector('.n span');
+    const ofEl = ringEl.querySelector('.n small');
     const views = [mapView, photoView, videoView, spotView];
     const img = photoView.querySelector('img');
     const capBox = photoView.querySelector('.caption');
@@ -57,28 +65,35 @@ export async function startCarousel(stageEl, opts = {}) {
     let cleanup = null;      // undoes the current slide's timers/listeners
     let token = 0;           // guards against stale callbacks
 
+    const KIND_LABEL = { map: 'WORLD MAP', photo: 'PHOTO', video: 'VIDEO', course: 'COURSE' };
+    const RING = 264;   // circumference of r=42
+
+    // durationMs > 0 animates the ring from empty to full; 0 leaves it empty (video not started yet).
     function renderBars(current, durationMs) {
         const n = slides.length;
+        numEl.textContent = String(current + 1).padStart(2, '0');
+        ofEl.textContent = `OF ${n}`;
+        kindEl.textContent = KIND_LABEL[(slides[current] || {}).kind] || '';
+
+        arc.style.transition = 'none';
+        arc.style.strokeDashoffset = RING;
+        void arc.getBoundingClientRect();
+        if (durationMs) {
+            arc.style.transition = `stroke-dashoffset ${durationMs}ms linear`;
+            arc.style.strokeDashoffset = 0;
+        }
+
         const shown = Math.min(n, MAX_BARS);
         let first = 0;
         if (n > MAX_BARS) first = Math.min(Math.floor(current / MAX_BARS) * MAX_BARS, n - MAX_BARS);
-        barsEl.innerHTML = '';
-        let fill = null;
+        dotsEl.innerHTML = '';
         for (let i = first; i < first + shown; i++) {
-            const seg = document.createElement('i');
-            if (i < current) seg.style.background = '#fff';
-            else if (i === current) {
-                fill = document.createElement('span');
-                fill.style.cssText = 'display:block;height:100%;width:0;background:#fff;border-radius:4px';
-                seg.appendChild(fill);
-            }
-            barsEl.appendChild(seg);
+            const d = document.createElement('i');
+            if (i < current) d.className = 'done';
+            else if (i === current) d.className = 'on';
+            dotsEl.appendChild(d);
         }
-        if (fill && durationMs) {
-            void fill.offsetWidth;
-            fill.style.transition = `width ${durationMs}ms linear`;
-            fill.style.width = '100%';
-        } else if (fill) fill.style.width = '100%';
+        dotsEl.hidden = n < 2;
     }
 
     function show(view) {

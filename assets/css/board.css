@@ -5,8 +5,9 @@
   --ok:#2e7d32; --warn:#ed6c02; --alert:#d32f2f;
   --r:20px; --shadow:0 10px 30px rgba(0,43,85,.10);
   --accent:var(--cyan);
+  --accent2:var(--blue);
 }
-body.xmas{ --accent:#ff5a5f; }
+body.xmas{ --accent:#ff5a5f; --accent2:#c62828; }
 *{box-sizing:border-box}
 html,body{margin:0;width:100vw;height:100vh;overflow:hidden}
 body{font-family:Inter,sans-serif;color:var(--text);
@@ -72,11 +73,20 @@ body.xmas #header{background:linear-gradient(100deg,#3b0710 0%,#7a0e1c 55%,#002b
 /* stage */
 .stage{flex:1;border-radius:24px;overflow:hidden;position:relative;box-shadow:0 18px 40px rgba(0,43,85,.22);background:#081827}
 .stage img.photo{width:100%;height:100%;object-fit:cover;display:block}
-.stage .bars{position:absolute;top:18px;left:22px;right:22px;display:flex;gap:6px}
-.stage .bars i{flex:1;height:5px;border-radius:4px;background:rgba(255,255,255,.35)}
-.stage .bars i.on{background:#fff}
-.stage .bars i.half{background:linear-gradient(90deg,#fff 55%,rgba(255,255,255,.35) 55%)}
-.caption{position:absolute;left:0;right:0;bottom:0;padding:90px 36px 30px;color:#fff;
+/* carousel progress: ring (top-left) + kind chip + dot track (bottom-left) */
+.stage .prog-glass{background:rgba(10,22,40,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.14)}
+.stage .ring{position:absolute;top:22px;left:22px;width:96px;height:96px;border-radius:50%;display:grid;place-items:center;color:#fff;z-index:20}
+.stage .ring svg{position:absolute;inset:0;transform:rotate(-90deg);overflow:visible}
+.stage .ring .arc{fill:none;stroke:url(#ring-grad);stroke-width:6;stroke-linecap:round;stroke-dasharray:264;stroke-dashoffset:264;filter:drop-shadow(0 0 6px var(--accent))}
+.stage .ring .n{position:relative;font:800 22px/1 'JetBrains Mono';text-align:center}
+.stage .ring .n small{display:block;font:700 10px 'JetBrains Mono';letter-spacing:1.5px;opacity:.75;margin-top:4px}
+.stage .kind{position:absolute;top:56px;left:130px;padding:7px 12px;border-radius:999px;color:#fff;font:800 12px 'JetBrains Mono';letter-spacing:2px;z-index:20}
+.stage .dots{position:absolute;left:28px;bottom:20px;display:flex;gap:8px;align-items:center;padding:8px 12px;border-radius:999px;z-index:20}
+.stage .dots[hidden]{display:none}
+.stage .dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35);transition:width .4s,background .4s}
+.stage .dots i.done{background:rgba(255,255,255,.8)}
+.stage .dots i.on{width:34px;border-radius:6px;background:linear-gradient(90deg,var(--accent2),var(--accent));box-shadow:0 0 12px var(--accent)}
+.caption{position:absolute;left:0;right:0;bottom:0;padding:90px 36px 66px;color:#fff;
   background:linear-gradient(0deg,rgba(0,20,40,.92) 0%,rgba(0,20,40,.6) 55%,rgba(0,20,40,0) 100%)}
 .caption small{font:700 14px 'JetBrains Mono';letter-spacing:3px;color:var(--accent);text-transform:uppercase}
 .caption h2{margin:6px 0 0;font:700 46px/1.05 Oswald}
