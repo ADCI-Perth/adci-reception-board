@@ -145,7 +145,6 @@ body.xmas #header{background:linear-gradient(100deg,#3b0710 0%,#7a0e1c 55%,#002b
 .hours div:last-child{border-bottom:0}
 .hours div span{font:700 16px 'JetBrains Mono';color:var(--muted)}
 .hours div.now{color:var(--blue)} .hours div.now span{color:var(--blue)}
-.hours div.closed span{color:var(--alert)}
 /* ticker */
 #ticker-bar{display:flex;align-items:center;background:var(--navy-deep);color:#fff;overflow:hidden}
 #ticker-bar .tag{flex:none;white-space:nowrap;height:100%;display:flex;align-items:center;gap:10px;padding:0 26px;background:var(--accent);color:var(--navy-deep);font:800 16px 'JetBrains Mono';letter-spacing:2px}
@@ -154,11 +153,6 @@ body.xmas #ticker-bar .tag{color:#fff}
 #ticker-bar .run b{color:var(--accent);font-weight:700}
 #ticker-bar .run em{font-style:normal;opacity:.35;margin:0 22px}
 
-.snow-static{position:fixed;inset:0;pointer-events:none;background-image:
- radial-gradient(3px 3px at 10% 20%,#fff 50%,transparent 51%),radial-gradient(2px 2px at 30% 60%,#fff 50%,transparent 51%),
- radial-gradient(3px 3px at 55% 30%,#fff 50%,transparent 51%),radial-gradient(2px 2px at 75% 75%,#fff 50%,transparent 51%),
- radial-gradient(4px 4px at 90% 15%,#fff 50%,transparent 51%),radial-gradient(2px 2px at 45% 85%,#fff 50%,transparent 51%);
- background-size:420px 380px;opacity:.85}
 
 @keyframes ticker-scroll{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}
 #ticker-bar .runwrap{flex:1;overflow:hidden}

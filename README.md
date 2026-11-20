@@ -9,7 +9,8 @@ What the board shows:
 
 - **Key dates** from the Calendar spreadsheet (census date, public holidays, results and so on).
 - **Notice board** and a **ticker** along the bottom, from the Notices sheet of `Board.xlsx`.
-- **Rooms right now**, from the Timetable plus the Rooms sheet of `Board.xlsx`.
+- **Rooms right now**, from the Timetable plus the Rooms sheet of `Board.xlsx`. The strip
+  shows only in teaching, orientation, summer and assessment weeks.
 - **Course spotlight** slides, from the Courses sheet of `Board.xlsx`.
 - **Photos** (with optional captions from the Media sheet) and videos.
 - A **QR code** in teaching, orientation, summer, assessment, tuition-free, study and exam

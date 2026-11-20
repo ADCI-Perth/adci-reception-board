@@ -6,7 +6,6 @@ export const CONFIG = {
     mapDuration: 30000,
     photoDuration: 6000,
 
-    mediaFolder: "media/",
     scheduleRefreshMs: 30000,   // v4 used 3 s; the board re-renders every 30 s
     reloadAfterMs: 46800000     // existing 13-hour full reload
 };

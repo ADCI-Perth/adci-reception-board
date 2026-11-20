@@ -3,6 +3,7 @@
 import { escapeHtml } from '../util.js';
 
 let CONFIG;
+let loaded = false;
 
 export function uvLabel(uv) {
     if (uv >= 11) return 'Extreme';
@@ -57,8 +58,9 @@ function fetchWeather() {
         card.className = 'card weather ' + conditionClass(cur.condition.text);
 
         const tiles = pickHours(day.hour).map(p => `<div>${escapeHtml(p.label)}<b>${p.temp}°</b></div>`);
-        const uv = Math.round(cur.uv ?? day.day.uv);
-        tiles.push(`<div>UV<b>${uv} <em>${uvLabel(uv)}</em></b></div>`);
+        const uvRaw = Number(cur.uv ?? day.day?.uv);
+        const uvTile = Number.isFinite(uvRaw) ? `${Math.round(uvRaw)} <em>${uvLabel(Math.round(uvRaw))}</em>` : '--';
+        tiles.push(`<div>UV<b>${uvTile}</b></div>`);
         tiles.push(`<div>Sunset<b>${escapeHtml(sunsetShort(day.astro.sunset))}</b></div>`);
 
         document.getElementById('weather-content').innerHTML = `
@@ -68,8 +70,10 @@ function fetchWeather() {
                 <div><span>${escapeHtml(cur.condition.text)}</span><span>Feels like ${Math.round(cur.feelslike_c)}° · Wind ${Math.round(cur.wind_kph)} km/h</span></div>
             </div>
             <div class="wx-row">${tiles.join('')}</div>`;
+        loaded = true;
     }).catch(() => {
-        document.getElementById('weather-content').textContent = 'Weather unavailable';
+        // Keep the last good render on a failed refresh; only show the message if nothing has loaded.
+        if (!loaded) document.getElementById('weather-content').textContent = 'Weather unavailable';
     });
 }
 

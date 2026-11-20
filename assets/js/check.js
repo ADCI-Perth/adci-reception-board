@@ -73,11 +73,16 @@ const mb = bytes => (bytes / (1024 * 1024)).toFixed(1);
 
 async function mediaHtml() {
   let manifest;
+  let res;
   try {
-    const res = await fetch('media/manifest.json', { cache: 'no-store' });
-    if (!res.ok) throw new Error(String(res.status));
-    manifest = await res.json();
-  } catch {
+    res = await fetch('media/manifest.json', { cache: 'no-store' });
+  } catch { res = null; }
+  if (res && res.ok) {
+    try { manifest = await res.json(); } catch {
+      return '<li class="warning">media/manifest.json could not be read — it exists but is not valid JSON. Rebuild it (locally: node tools/build-media-manifest.mjs .)</li>';
+    }
+  }
+  if (!manifest) {
     return '<li class="warning">media/manifest.json not found — it is built during deploy (locally: node tools/build-media-manifest.mjs .)</li>';
   }
   let html = '';
@@ -117,6 +122,8 @@ async function main() {
   if (calFile.error || ttFile.error) {
     $('issues').innerHTML = '<li class="error">A file could not be read, so the checks cannot run. Fix the file problem above and reload this page.</li>';
     $('preview').textContent = 'Not available until both files load.';
+    const html = board.errors.map(e => `<li class="error">Problem: ${esc(`Board.xlsx › ${e.sheet} row ${e.row}: ${e.message}`)}</li>`).join('');
+    $('issues').innerHTML += html;
     return;
   }
 

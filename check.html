@@ -6,28 +6,29 @@
 <title>ADCI | Data check</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link href="assets/css/board.css" rel="stylesheet">
 <style>
+  :root { --navy:#002b55; --blue:#0056b3; --cyan:#00d2ff; --bg:#ecf0f3; --card:#fff; --text:#111; --muted:#5b6672;
+          --ok:#2e7d32; --warn:#ed6c02; --alert:#d32f2f; --radius:16px; --shadow:0 10px 30px rgba(0,43,85,.10); }
   html, body { height: auto; overflow: auto; }
-  body { background: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 32px; }
+  body { display: block; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; padding: 32px; }
   .page { max-width: 1100px; margin: 0 auto; }
-  h1 { font-family: 'Oswald', sans-serif; color: var(--brand-dark); font-size: 36px; margin: 0 0 6px; }
-  h2 { font-family: 'Oswald', sans-serif; color: var(--brand-dark); font-size: 24px; margin: 0 0 12px; }
-  .lead { color: var(--text-muted); margin: 0 0 24px; }
-  section { background: var(--bg-card); border-radius: var(--border-radius); box-shadow: var(--shadow-card); padding: 24px; margin-bottom: 24px; }
+  h1 { font-family: 'Oswald', sans-serif; color: var(--navy); font-size: 36px; margin: 0 0 6px; }
+  h2 { font-family: 'Oswald', sans-serif; color: var(--navy); font-size: 24px; margin: 0 0 12px; }
+  .lead { color: var(--muted); margin: 0 0 24px; }
+  section { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; margin-bottom: 24px; }
   ul { list-style: none; margin: 0; padding: 0; }
   li { padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-weight: 600; }
-  li.error { background: #fdecea; color: var(--alert-color); border-left: 6px solid var(--alert-color); }
-  li.warning { background: #fff4e5; color: #9a4a00; border-left: 6px solid var(--warning-color); }
-  li.ok { background: #e8f5e9; color: var(--success-color); border-left: 6px solid var(--success-color); }
-  li.file-ok { background: #f4f7fa; border-left: 6px solid var(--success-color); }
-  li.file-bad { background: #fdecea; color: var(--alert-color); border-left: 6px solid var(--alert-color); }
-  .muted { color: var(--text-muted); font-weight: 400; }
+  li.error { background: #fdecea; color: var(--alert); border-left: 6px solid var(--alert); }
+  li.warning { background: #fff4e5; color: #9a4a00; border-left: 6px solid var(--warn); }
+  li.ok { background: #e8f5e9; color: var(--ok); border-left: 6px solid var(--ok); }
+  li.file-ok { background: #f4f7fa; border-left: 6px solid var(--ok); }
+  li.file-bad { background: #fdecea; color: var(--alert); border-left: 6px solid var(--alert); }
+  .muted { color: var(--muted); font-weight: 400; }
   table { width: 100%; border-collapse: collapse; font-size: 15px; }
-  th { text-align: left; background: var(--brand-dark); color: #fff; padding: 8px 12px; }
+  th { text-align: left; background: var(--navy); color: #fff; padding: 8px 12px; }
   td { padding: 8px 12px; border-bottom: 1px solid #e3e8ee; vertical-align: top; }
   td.mode { font-weight: 700; text-transform: capitalize; }
-  a { color: var(--brand-blue); font-weight: 600; }
+  a { color: var(--blue); font-weight: 600; }
 </style>
 </head>
 <body>

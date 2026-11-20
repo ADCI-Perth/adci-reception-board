@@ -92,6 +92,8 @@ function startPanels(data, state, iso) {
     // Info hubs re-roll their tips and quote hourly (as the old boards did); the 30 s tick
     // only re-renders the classes hub.
     if (!isClasses) setInterval(drawHub, 3600000);
+    // Re-render once web fonts are loaded so overflow fitting measures the real glyph widths.
+    if (!isClasses && document.fonts?.ready) document.fonts.ready.then(drawHub).catch(() => {});
     setInterval(() => autoScrollTimetable(hubEl?.querySelector('.classes')), 10000);
 }
 
