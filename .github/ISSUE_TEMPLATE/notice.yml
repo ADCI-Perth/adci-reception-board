@@ -1,6 +1,5 @@
 name: Notice
 description: Put a notice on the reception board. Close the issue to take it down.
-title: ""
 labels: ["notice"]
 body:
   - type: markdown
