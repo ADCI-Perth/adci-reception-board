@@ -6,6 +6,7 @@ import { chipText, showsRooms, hubKind } from './core/modes.js';
 import { keyDates } from './core/keydates.js';
 import { roomsNow } from './core/rooms.js';
 import { activeNotices } from './core/boarddata.js';
+import { loadIssueNotices } from './board/ghnotices.js';
 import { classesForDay } from './core/timetable.js';
 import { CONFIG } from './board/config.js';
 import { loadData } from './board/data.js';
@@ -60,9 +61,21 @@ function startPanels(data, state, iso) {
     let notices = [];
     safely('Active notices', () => { notices = activeNotices(board.notices, iso); });
     safely('Key dates', () => renderKeyDates($('keydates-list'), keyDates(data.cal, iso)));
-    safely('Notices', () => startNotices(
-        { title: $('notice-title'), message: $('notice-message'), pager: $('notice-pager') },
-        $('ticker-run'), notices, bannerFor(state)));
+    const noticeEls = { title: $('notice-title'), message: $('notice-message'), pager: $('notice-pager') };
+    safely('Notices', () => startNotices(noticeEls, $('ticker-run'), notices, bannerFor(state)));
+
+    // Notices posted as GitHub Issues: added to the Board.xlsx ones, refreshed every 5 minutes.
+    // The card and ticker are only redrawn when the list actually changes.
+    let shownKey = JSON.stringify(notices);
+    const refreshIssueNotices = () => loadIssueNotices().then(({ notices: gh }) => safely('GitHub notices', () => {
+        const merged = activeNotices([...(board.notices || []), ...gh], iso);
+        const key = JSON.stringify(merged);
+        if (key === shownKey) return;
+        shownKey = key;
+        startNotices(noticeEls, $('ticker-run'), merged, bannerFor(state));
+    })).catch(e => console.error('GitHub notices failed', e));
+    refreshIssueNotices();
+    setInterval(refreshIssueNotices, 300000);
     safely('Countdown', () => renderCountdown(
         { box: $('panel-countdown'), label: $('countdown-label'), days: $('days-count'), sub: $('countdown-sub') }, state, iso));
 

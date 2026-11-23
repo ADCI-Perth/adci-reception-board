@@ -1,5 +1,6 @@
 // Data check page: fetches the spreadsheets live (never the cache), lists problems,
 // and previews what the board will show for the next 21 days.
+import { loadIssueNotices } from './board/ghnotices.js';
 import { sheetRows } from './core/workbook.js';
 import { parseCalendarRows } from './core/calendar.js';
 import { parseTimetableRows, classesForDay } from './core/timetable.js';
@@ -59,13 +60,17 @@ function boardFileLine(f) {
   return `<li class="file-ok">${name}: loaded <span class="muted">(${esc(counts)}; last modified: ${esc(when)})</span></li>`;
 }
 
-function noticesHtml(board, today) {
+function noticesHtml(list, today, gh) {
   const end = addDays(today, 20);
-  const list = board.notices.filter(n => (!n.start || n.start <= end) && (!n.end || n.end >= today));
-  if (!list.length) return '<li class="muted">No notices are active in the next 21 days. The board shows its default welcome notice.</li>';
-  return list.map(n => {
+  const active = list.filter(n => (!n.start || n.start <= end) && (!n.end || n.end >= today));
+  let html = '';
+  if (!gh.live) html += '<li class="file-bad">GitHub notices could not be loaded just now (the board keeps the last ones it saw). Reload this page in a minute.</li>';
+  html += gh.skipped.map(s => `<li class="file-bad">GitHub issue #${s.number} ${esc(s.title ? '"' + s.title + '"' : '')} is not shown: ${esc(s.reason)}</li>`).join('');
+  if (!active.length) return html + '<li class="muted">No notices are active in the next 21 days. The board shows its default welcome notice.</li>';
+  return html + active.map(n => {
     const range = !n.start && !n.end ? 'always' : `${n.start ? formatShort(n.start) : 'always'} to ${n.end ? formatShort(n.end) : 'always'}`;
-    return `<li class="file-ok">${esc(n.title)} <span class="muted">(${esc(range)})${n.message ? ' - ' + esc(n.message) : ''}</span></li>`;
+    const from = n.source === 'github' ? `GitHub issue #${n.number}` : 'Board.xlsx';
+    return `<li class="file-ok">${esc(n.title)} <span class="muted">(${esc(range)} · ${esc(from)})${n.message ? ' - ' + esc(n.message) : ''}</span></li>`;
   }).join('');
 }
 
@@ -117,7 +122,9 @@ async function main() {
   $('media').innerHTML = await mediaHtml();
   const board = boardFile.sheets ? parseBoardSheets(boardFile.sheets) : parseBoardSheets({});
   const today = todayISO(location.search);
-  $('notices').innerHTML = boardFile.error ? '<li class="muted">Not available - Board.xlsx could not be read.</li>' : noticesHtml(board, today);
+  const gh = await loadIssueNotices();
+  $('notices').innerHTML = (boardFile.error ? '<li class="file-bad">Board.xlsx could not be read - only GitHub notices are listed.</li>' : '')
+    + noticesHtml([...board.notices, ...gh.notices], today, gh);
 
   if (calFile.error || ttFile.error) {
     $('issues').innerHTML = '<li class="error">A file could not be read, so the checks cannot run. Fix the file problem above and reload this page.</li>';

@@ -1,0 +1,35 @@
+name: Notice
+description: Put a notice on the reception board. Close the issue to take it down.
+title: ""
+labels: ["notice"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The **title** above is the notice heading on the board (keep it short, e.g. *Graduation photos — Friday 4pm*).
+        It appears on the board within about 5 minutes. **To remove it, close this issue.**
+        You can have several notices at once — the board rotates them every 10 seconds.
+  - type: textarea
+    id: message
+    attributes:
+      label: Message
+      description: One or two short sentences shown under the title. Optional.
+      placeholder: Graduating students, meet in the Meeting Room for group photos.
+    validations:
+      required: false
+  - type: input
+    id: from
+    attributes:
+      label: Show from
+      description: First day to show it, as dd/mm/yyyy. Leave blank to show it straight away.
+      placeholder: 25/11/2026
+    validations:
+      required: false
+  - type: input
+    id: until
+    attributes:
+      label: Show until
+      description: Last day to show it, as dd/mm/yyyy. Leave blank to keep showing it until the issue is closed.
+      placeholder: 28/11/2026
+    validations:
+      required: false

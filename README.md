@@ -8,7 +8,8 @@ depending on the date in the Calendar spreadsheet. You do not need to touch the 
 What the board shows:
 
 - **Key dates** from the Calendar spreadsheet (census date, public holidays, results and so on).
-- **Notice board** and a **ticker** along the bottom, from the Notices sheet of `Board.xlsx`.
+- **Notice board** and a **ticker** along the bottom, from notices posted on GitHub (see
+  *Posting a notice* below) and the Notices sheet of `Board.xlsx`.
 - **Rooms right now**, from the Timetable plus the Rooms sheet of `Board.xlsx`. The strip
   shows only in teaching, orientation, summer and assessment weeks.
 - **Course spotlight** slides, from the Courses sheet of `Board.xlsx`.
@@ -33,6 +34,25 @@ Open the board address and add `check.html` on the end:
 It lists any problems found in the spreadsheets (for example a misspelt date), the notices that
 will show over the next three weeks, and every photo and video with its size. A file bigger than
 25 MB is flagged (see Photos and videos below).
+
+## Posting a notice
+
+The quickest way, with no spreadsheet:
+
+1. On github.com, open the **adci-reception-board** repository and click the **Issues** tab.
+2. Click **New issue**, then **Notice**, then **Get started**.
+3. Type the heading in **Title** (keep it short). Optionally fill in **Message**, **Show from** and
+   **Show until** (dates as dd/mm/yyyy; leave blank to show it straight away / until removed).
+4. Click **Create**. The notice appears on the board within about 5 minutes.
+
+**To remove a notice, close its issue.** To change it, edit the issue. You can post as many
+notices as you like: the board rotates them every 10 seconds and runs them all in the ticker.
+This also works from the GitHub phone app.
+
+Only notices posted by the GitHub accounts listed in `data/notice-posters.txt` are shown,
+because the repository is public and anyone can open an issue. To let another staff member post,
+add their GitHub username to that file (open it, click the pencil, add a line, Commit). If a
+notice does not appear, `check.html` says why (for example a mistyped date).
 
 ## Previewing a particular day
 

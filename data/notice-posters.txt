@@ -1,0 +1,4 @@
+# GitHub usernames allowed to post notices on the reception board (one per line).
+# The repository is public, so anyone can open an issue - only issues from these
+# accounts are shown. Add a staff member's GitHub username here to let them post.
+moktan456
