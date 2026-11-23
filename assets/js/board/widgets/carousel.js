@@ -5,7 +5,25 @@ import { escapeHtml } from '../util.js';
 import { drawMap, start as startMap } from './map.js';
 
 const MAX_BARS = 12;
-const VIDEO_STALL_MS = 5000;
+// GitHub Pages can be slow the first time a file is asked for. The current slide stays on screen
+// while the next photo/video loads; only after these limits is a slow file skipped.
+const PHOTO_LOAD_MS = 25000;
+const VIDEO_START_MS = 30000;
+const VIDEO_FROZEN_MS = 20000;
+
+// Resolves true once the image is downloaded and decoded, false on error or timeout.
+function loadImage(url, ms) {
+    return new Promise(resolve => {
+        const im = new Image();
+        const timer = setTimeout(() => resolve(false), ms);
+        im.onload = () => {
+            const done = () => { clearTimeout(timer); resolve(true); };
+            if (im.decode) im.decode().then(done, done); else done();
+        };
+        im.onerror = () => { clearTimeout(timer); resolve(false); };
+        im.src = url;
+    });
+}
 
 const MANIFEST_TIMEOUT_MS = 8000;
 
@@ -33,7 +51,10 @@ export async function startCarousel(stageEl, opts = {}) {
 
     const mapView = stageEl.querySelector('#view-map');
     const photoView = el('<div class="center-slide" id="view-photo"><div class="photo-bg"></div><img class="photo" alt=""><div class="caption" hidden><small>OUR CAMPUS</small><h2></h2></div></div>');
-    const videoView = el('<div class="center-slide" id="view-video"><video muted playsinline style="width:100%;height:100%;object-fit:cover;background:#000"></video></div>');
+    // Two video elements: one plays while the other downloads the next video in the playlist.
+    const VSTYLE = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000';
+    const videoView = el(`<div class="center-slide" id="view-video"><video muted playsinline preload="auto" style="${VSTYLE}"></video>`
+        + `<video muted playsinline preload="auto" style="${VSTYLE};visibility:hidden"></video></div>`);
     const spotView = el('<div class="center-slide" id="view-spot"><div class="spot"><div class="txt"></div><div class="spot-photo"></div></div></div>');
     // Progress: countdown ring + slide number (top-left), kind chip, dot track (bottom-left).
     const ringEl = el('<div class="ring prog-glass"><svg viewBox="0 0 96 96"><defs><linearGradient id="ring-grad">'
@@ -51,7 +72,42 @@ export async function startCarousel(stageEl, opts = {}) {
     const photoBg = photoView.querySelector('.photo-bg');
     const capBox = photoView.querySelector('.caption');
     const capTitle = capBox.querySelector('h2');
-    const video = videoView.querySelector('video');
+    const videos = [...videoView.querySelectorAll('video')];
+    let videoCur = 0;                       // index of the element last shown
+    const photoLoads = new Map();           // url -> Promise<boolean>, so a preload is reused
+
+    function photoReady(url) {
+        if (!photoLoads.has(url)) {
+            const p = loadImage(url, PHOTO_LOAD_MS);
+            photoLoads.set(url, p);
+            p.then(ok => { if (!ok) photoLoads.delete(url); });   // retry a failed one next time round
+            if (photoLoads.size > 8) photoLoads.delete(photoLoads.keys().next().value);
+        }
+        return photoLoads.get(url);
+    }
+
+    // The element that already holds this video, else the one not currently shown.
+    function videoFor(url) {
+        const hit = videos.findIndex(v => v.dataset.src === url);
+        return hit >= 0 ? hit : 1 - videoCur;
+    }
+
+    function loadVideo(i, url) {
+        const v = videos[i];
+        if (v.dataset.src === url && !v.error) return;
+        v.dataset.src = url;
+        v.src = url;
+        v.load();
+    }
+
+    // Start downloading the slide after the current one while the current one is on screen.
+    function preloadNext() {
+        if (slides.length < 2) return;
+        const s = slides[(index + 1) % slides.length];
+        if (s.kind === 'photo') photoReady(s.url);
+        else if (s.kind === 'course' && s.photoUrl) photoReady(s.photoUrl);
+        else if (s.kind === 'video') loadVideo(videoFor(s.url), s.url);
+    }
     const spotTxt = spotView.querySelector('.txt');
     const spotPhoto = spotView.querySelector('.spot-photo');
 
@@ -133,16 +189,21 @@ export async function startCarousel(stageEl, opts = {}) {
                 renderBars(index, mapDuration);
                 after(() => { try { drawMap(); } catch (e) { console.error('drawMap failed', e); } }, 100);
                 after(go, mapDuration);
+                preloadNext();
             } else if (slide.kind === 'photo') {
-                img.onerror = go;
-                img.src = slide.url;
-                photoBg.style.backgroundImage = `url("${slide.url}")`;   // blurred fill behind the whole photo
-                if (slide.caption) { capTitle.textContent = slide.caption; capBox.hidden = false; }
-                else { capTitle.textContent = ''; capBox.hidden = true; }
-                show(photoView);
-                renderBars(index, photoDuration);
-                after(go, photoDuration);
-                cleanup = () => { timers.forEach(clearTimeout); img.onerror = null; };
+                // Keep the previous slide up until the photo is fully downloaded; skip it if it never arrives.
+                photoReady(slide.url).then(ok => {
+                    if (my !== token) return;
+                    if (!ok) { console.warn('Photo skipped (slow or missing):', slide.url); go(); return; }
+                    img.src = slide.url;
+                    photoBg.style.backgroundImage = `url("${slide.url}")`;   // blurred fill behind the whole photo
+                    if (slide.caption) { capTitle.textContent = slide.caption; capBox.hidden = false; }
+                    else { capTitle.textContent = ''; capBox.hidden = true; }
+                    show(photoView);
+                    renderBars(index, photoDuration);
+                    after(go, photoDuration);
+                    preloadNext();
+                });
             } else if (slide.kind === 'course') {
                 const c = slide.course;
                 const facts = [[c.duration, 'Duration'], [c.intakes, 'Intakes'], [c.location, 'Location']]
@@ -164,32 +225,48 @@ export async function startCarousel(stageEl, opts = {}) {
                 show(spotView);
                 renderBars(index, photoDuration * 2);
                 after(go, photoDuration * 2);
+                preloadNext();
             } else if (slide.kind === 'video') {
+                // The previous slide stays up until the video is actually playing.
+                const vi = videoFor(slide.url);
+                const video = videos[vi];
                 let started = false;
+                const skip = why => { console.warn(`Video skipped (${why}):`, slide.url); go(); };
                 const onPlaying = () => {
                     if (started) return;
                     started = true;
                     clearTimeout(stall);
-                    if (isFinite(video.duration) && video.duration > 0) renderBars(index, video.duration * 1000);
+                    videoCur = vi;
+                    videos.forEach((v, i) => { v.style.visibility = i === vi ? 'visible' : 'hidden'; });
+                    show(videoView);
+                    renderBars(index, isFinite(video.duration) && video.duration > 0 ? video.duration * 1000 : 0);
+                    preloadNext();
+                    // A video frozen mid-way (network dropped) never fires 'ended': move on after VIDEO_FROZEN_MS.
+                    let lastT = -1, lastMove = Date.now();
+                    const watch = setInterval(() => {
+                        if (video.currentTime !== lastT) { lastT = video.currentTime; lastMove = Date.now(); }
+                        else if (Date.now() - lastMove > VIDEO_FROZEN_MS) skip('froze');
+                    }, 1000);
+                    timers.push(watch);
                 };
-                const stall = setTimeout(go, VIDEO_STALL_MS);
+                const onError = () => { video.dataset.src = ''; skip('error'); };
+                const stall = setTimeout(() => skip('did not start in time'), VIDEO_START_MS);
                 timers.push(stall);
                 video.addEventListener('ended', go);
-                video.addEventListener('error', go);
+                video.addEventListener('error', onError);
                 video.addEventListener('playing', onPlaying);
                 cleanup = () => {
-                    timers.forEach(clearTimeout);
+                    timers.forEach(t => { clearTimeout(t); clearInterval(t); });
                     video.removeEventListener('ended', go);
-                    video.removeEventListener('error', go);
+                    video.removeEventListener('error', onError);
                     video.removeEventListener('playing', onPlaying);
                     video.pause();
                 };
                 video.muted = true;
-                video.src = slide.url;
-                show(videoView);
-                renderBars(index, 0);
+                loadVideo(vi, slide.url);
+                video.currentTime = 0;
                 const p = video.play();
-                if (p && p.catch) p.catch(go);
+                if (p && p.catch) p.catch(() => { if (!started && video.error) onError(); });
             }
         } catch (e) {
             console.error('Carousel slide failed', e);
