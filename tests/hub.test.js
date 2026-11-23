@@ -34,6 +34,13 @@ test('showsCountdown: needs a countdown and is never shown in teaching/orientati
 
 const cls = (unit, start, end) => ({ unit, start, end });
 
+test('classStatuses: live class carries its progress (percent, current hour of total)', () => {
+  const [b] = classStatuses([cls('B', '09:00', '12:00')], '10:21');
+  assert.deepEqual(b.progress, { pct: 45, hour: 2, hours: 3 });
+  const [d] = classStatuses([cls('D', '09:00', '12:00')], '12:30');
+  assert.equal(d.progress, undefined);
+});
+
 test('classStatuses: ended, live, first upcoming is next with time left, later ones upcoming', () => {
   const out = classStatuses([cls('A', '08:00', '09:00'), cls('B', '09:00', '12:00'), cls('C', '12:00', '13:00'), cls('D', '14:00', '16:00')], '09:42');
   assert.deepEqual(out.map(c => c.status), ['done', 'live', 'next', 'upcoming']);

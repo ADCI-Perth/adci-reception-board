@@ -29,7 +29,15 @@ export function classStatuses(classes, nowHHMM) {
             const s = minutes(c.start);
             const e = minutes(c.end);
             if (now >= e) return { ...c, status: 'done', tag: 'ENDED' };
-            if (now >= s) return { ...c, status: 'live', tag: '● LIVE NOW' };
+            if (now >= s) {
+                // As the original board: % elapsed and "hour 2 of 3".
+                const progress = {
+                    pct: Math.round(((now - s) / (e - s)) * 100),
+                    hour: Math.floor((now - s) / 60) + 1,
+                    hours: Math.ceil((e - s) / 60),
+                };
+                return { ...c, status: 'live', tag: '● LIVE NOW', progress };
+            }
             if (!nextSeen) { nextSeen = true; return { ...c, status: 'next', tag: `NEXT · IN ${timeLeft(s - now)}` }; }
             return { ...c, status: 'upcoming', tag: 'UPCOMING' };
         });
@@ -65,9 +73,15 @@ export function pickTips(tips, n, rand = Math.random) {
 function classRow(c) {
     const name = c.unitName ? ` ${escapeHtml(c.unitName)}` : '';
     const where = [c.lecturer, c.room].filter(Boolean).map(escapeHtml).join(' · ');
+    // Live: heartbeat dot in the tag, progress stats beside it and a progress bar along the card's bottom.
+    const p = c.progress;
+    const tag = c.status === 'live'
+        ? `<span class="s"><i class="beat"></i>LIVE NOW</span><span class="prog-stat">${p.pct}% · ${p.hour}/${p.hours} HRS</span>`
+        : `<span class="s">${c.tag}</span>`;
+    const bar = c.status === 'live' ? `<div class="cls-progress"><i style="width:${p.pct}%"></i></div>` : '';
     return `<div class="cls ${c.status}"><div class="t">${escapeHtml(c.start)}<small>${escapeHtml(c.end)}</small></div>`
         + `<div class="b"><h4><em>${escapeHtml(c.unit)}</em>${name}</h4>${where ? `<p>${where}</p>` : ''}`
-        + `<span class="s">${c.tag}</span></div></div>`;
+        + `${tag}</div>${bar}</div>`;
 }
 
 function renderClasses(el, state, classes, now) {
@@ -77,7 +91,7 @@ function renderClasses(el, state, classes, now) {
     const prev = el.querySelector('.classes');
     const scroll = prev ? prev.scrollTop : 0;
     el.className = 'card hub-main kind-classes';
-    el.innerHTML = `<div class="hub-head"><h2>Today’s classes</h2>${live ? `<span class="badge">${live} LIVE</span>` : ''}</div>`
+    el.innerHTML = `<div class="hub-head"><h2>Today’s classes</h2>${live ? `<span class="badge badge-live"><i class="beat"></i>${live} LIVE</span>` : ''}</div>`
         + `<div class="classes">${rows.length ? rows.map(classRow).join('') : `<div class="empty-note hub-empty">${empty}</div>`}</div>`;
     const list = el.querySelector('.classes');
     if (list) list.scrollTop = scroll;

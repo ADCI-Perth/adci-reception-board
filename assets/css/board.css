@@ -224,3 +224,21 @@ body.xmas #ticker-bar .tag{color:#fff}
 .rooms.many .room{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;row-gap:6px;padding:14px 16px;align-items:center}
 .rooms.many .room .tag{grid-column:2;margin-left:0;justify-self:start;font-size:12px;padding:4px 8px}
 .rooms.many .room h4{font-size:17px}
+
+/* ---------- live class heartbeat (lub-dub every 1.6 s) ---------- */
+.cls{position:relative}
+.cls.live{animation:live-glow 1.6s ease-in-out infinite}
+.cls .s,.badge-live{display:inline-flex;align-items:center;gap:7px}
+.beat{position:relative;width:8px;height:8px;border-radius:50%;background:#fff;flex:none;animation:heartbeat 1.6s ease-in-out infinite}
+.beat::after{content:"";position:absolute;inset:0;border-radius:50%;background:#fff;animation:beat-ring 1.6s ease-out infinite}
+.prog-stat{margin-left:10px;font:800 12px 'JetBrains Mono';letter-spacing:1px;color:var(--ok)}
+.cls-progress{position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(46,125,50,.15)}
+.cls-progress i{display:block;height:100%;position:relative;overflow:hidden;background:linear-gradient(90deg,#66bb6a,var(--ok));transition:width 1s linear}
+.cls-progress i::after{content:"";position:absolute;top:0;bottom:0;width:60px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);animation:bar-shimmer 2.4s linear infinite}
+.busy .st{animation:room-pulse 1.6s ease-out infinite}
+@keyframes heartbeat{0%,100%{transform:scale(1)}12%{transform:scale(1.55)}24%{transform:scale(1)}36%{transform:scale(1.35)}50%{transform:scale(1)}}
+@keyframes beat-ring{0%{transform:scale(1);opacity:.75}60%,100%{transform:scale(3);opacity:0}}
+@keyframes live-glow{0%,50%,100%{box-shadow:0 0 0 0 rgba(46,125,50,0)}12%{box-shadow:0 0 0 5px rgba(46,125,50,.28)}24%{box-shadow:0 0 0 1px rgba(46,125,50,.1)}36%{box-shadow:0 0 0 7px rgba(46,125,50,.2)}}
+@keyframes bar-shimmer{from{left:-60px}to{left:100%}}
+@keyframes room-pulse{0%{box-shadow:0 0 0 0 rgba(46,125,50,.55)}70%,100%{box-shadow:0 0 0 10px rgba(46,125,50,0)}}
+@media (prefers-reduced-motion:reduce){.cls.live,.beat,.beat::after,.cls-progress i::after,.busy .st{animation:none}}
