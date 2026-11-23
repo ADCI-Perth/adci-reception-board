@@ -91,7 +91,7 @@ function renderClasses(el, state, classes, now) {
     const prev = el.querySelector('.classes');
     const scroll = prev ? prev.scrollTop : 0;
     el.className = 'card hub-main kind-classes';
-    el.innerHTML = `<div class="hub-head"><h2>Today’s classes</h2>${live ? `<span class="badge badge-live"><i class="beat"></i>${live} LIVE</span>` : ''}</div>`
+    el.innerHTML = `<div class="hub-head"><h2>Today’s classes</h2>${live ? `<span class="badge">${live} LIVE</span>` : ''}</div>`
         + `<div class="classes">${rows.length ? rows.map(classRow).join('') : `<div class="empty-note hub-empty">${empty}</div>`}</div>`;
     const list = el.querySelector('.classes');
     if (list) list.scrollTop = scroll;
