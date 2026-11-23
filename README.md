@@ -87,9 +87,36 @@ file in and **Commit changes**. To remove one: open the file, click the bin (del
 commit. The list of files (`media/manifest.json`) is built automatically when the site is
 published, so just wait the usual 5 to 10 minutes.
 
-**github.com will not accept an upload bigger than 25 MB per file.** Shrink large videos before
-uploading. `check.html` flags any existing file over 25 MB, because it cannot be replaced through
-the github.com upload page.
+**github.com will not accept an upload bigger than 25 MB per file.** `check.html` flags any existing
+file over 25 MB, because it cannot be replaced through the github.com upload page.
+
+### Compress photos and videos before uploading
+
+Always compress new photos and videos first. Phone photos and stock videos are often 5 to 25 MB, far
+more than the board can show, and big files load slowly on the reception screen.
+
+**One-time setup:** on github.com open the **tools** folder, click `Compress-for-board.bat`, then
+click the **Download raw file** button (the down arrow) and save it somewhere handy, such as your
+Desktop. If Windows shows *"Windows protected your PC"* the first time, click **More info**, then
+**Run anyway**.
+
+**Each time:**
+
+1. Put the new photos and videos in a folder on your PC.
+2. Drag the files (or the whole folder) onto `Compress-for-board.bat`.
+3. A window shows each file's size before and after. The first time, it offers to install the free
+   **ffmpeg** tool it needs: type **Y** and press Enter.
+4. When it says **Done**, a **Compressed for board** folder opens next to your files. Upload the
+   files from that folder (see above). Your original files are not changed.
+
+What it does: photos become JPEGs no bigger than 1920 pixels (phone photos are turned the right way
+up), and videos become 1080p MP4s with no sound (the board plays videos muted). A PNG or MOV file
+comes out as `.jpg` or `.mp4`, so use the new name if you add a caption on the Media sheet. A
+video that is still over 25 MB is shown in red: trim it shorter first.
+
+No admin rights to install ffmpeg? Use [squoosh.app](https://squoosh.app) for photos (resize to
+1920 wide, MozJPEG quality 80) or the free [HandBrake](https://handbrake.fr) app for videos
+(preset *Fast 1080p30*, audio removed).
 
 The logo and QR code image are in `assets/img/`.
 
